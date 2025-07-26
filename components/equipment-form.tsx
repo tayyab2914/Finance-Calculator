@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button"
 import { Trash2 } from "lucide-react"
 import type { Equipment } from "@/app/upgrade-analysis/page"
 import { useEffect, useState } from "react"
+import { calculateVolumeTotals } from "@/lib/equipment-calculations"
 
 interface EquipmentFormProps {
   equipment: Equipment
@@ -87,33 +88,9 @@ export function EquipmentForm({
     })
   }
 
-  // Calculate volume totals for comparison
-  const calculateVolumeTotals = () => {
-    const currentTotals = { black: 0, color: 0 }
-    const proposedTotals = { black: 0, color: 0 }
-
-    allCurrentEquipment.forEach((eq) => {
-      if (eq.copyBasedService && eq.clickCharges) {
-        currentTotals.black += eq.clickCharges.black?.monthlyVolume || 0
-        if (eq.type === "color" && eq.clickCharges.color) {
-          currentTotals.color += eq.clickCharges.color.monthlyVolume || 0
-        }
-      }
-    })
-
-    allProposedEquipment.forEach((eq) => {
-      if (eq.copyBasedService && eq.clickCharges) {
-        proposedTotals.black += eq.clickCharges.black?.monthlyVolume || 0
-        if (eq.type === "color" && eq.clickCharges.color) {
-          proposedTotals.color += eq.clickCharges.color.monthlyVolume || 0
-        }
-      }
-    })
-
-    return { currentTotals, proposedTotals }
-  }
-
-  const { currentTotals, proposedTotals } = calculateVolumeTotals()
+  // Calculate volume totals for comparison using the modular function
+  const currentTotals = calculateVolumeTotals(allCurrentEquipment)
+  const proposedTotals = calculateVolumeTotals(allProposedEquipment)
 
   return (
     <Card>

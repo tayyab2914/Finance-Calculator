@@ -19,6 +19,15 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Button } from "@/components/ui/button"
+import { Download } from "lucide-react"
+import {
+  aggregateEquipmentCashFlows,
+  calculateNPV,
+  calculatePaybackPeriod,
+  calculateAnnualTotals,
+  type MonthlyBreakdown,
+} from "@/lib/equipment-calculations"
 
 interface AnalysisResultsProps {
   clientDetails: ClientDetails
@@ -33,15 +42,18 @@ interface CashFlowData {
   savings: number
 }
 
-interface DetailedCashFlow {
-  month: number
-  equipment: string
-  lease: number
-  blackClicks: number
-  colorClicks: number
-  toner: number
-  savings: number
-  total: number
+interface AnalysisData {
+  chartData: CashFlowData[]
+  currentNPV: number
+  proposedNPV: number
+  npvSavings: number
+  totalCurrentCost: number
+  totalProposedCost: number
+  firstMonthSavings: number
+  allDetails: MonthlyBreakdown[]
+  currentCashFlows: number[]
+  proposedCashFlows: number[]
+  paybackPeriodMonths: number | null
 }
 
 export function AnalysisResults({ clientDetails, currentEquipment, proposedEquipment }: AnalysisResultsProps) {
@@ -49,190 +61,63 @@ export function AnalysisResults({ clientDetails, currentEquipment, proposedEquip
   const [discountRateAnnual, setDiscountRateAnnual] = useState<number>(8)
   const [customDiscountRate, setCustomDiscountRate] = useState<string>("")
 
-  const analysisData = useMemo(() => {
-    const discountRate = discountRateAnnual / 100 / 12 // Annual discount rate, monthly
+  const analysisData = useMemo((): AnalysisData => {
+    const monthlyDiscountRate = discountRateAnnual / 100 / 12
     const totalMonths = analysisYears * 12
 
-    // Calculate monthly cash flows for each equipment with detailed breakdown
-    const calculateEquipmentCashFlow = (
-      equipment: Equipment,
-      months: number,
-      type: "current" | "proposed",
-    ): { cashFlows: number[]; details: DetailedCashFlow[] } => {
-      const cashFlows: number[] = []
-      const details: DetailedCashFlow[] = []
+    // Calculate cash flows for current equipment
+    const currentResult = aggregateEquipmentCashFlows(currentEquipment, totalMonths, "current")
 
-      for (let month = 1; month <= months; month++) {
-        let monthlyCost = 0
-        let leaseCost = 0
-        let blackClickCost = 0
-        let colorClickCost = 0
-        let tonerCost = 0
-        let savingsCost = 0
+    // Calculate cash flows for proposed equipment
+    const proposedResult = aggregateEquipmentCashFlows(proposedEquipment, totalMonths, "proposed")
 
-        // Lease costs with proper escalation timing
-        if (equipment.ownership === "lease" && equipment.leaseDetails) {
-          const { monthlyAmount, annualEscalation, monthsRemaining, paymentFrequency, evergreenRental, reducedRate } =
-            equipment.leaseDetails
-
-          // Determine if this is a payment month for quarterly payments
-          const isPaymentMonth = paymentFrequency === "monthly" || (paymentFrequency === "quarterly" && month % 3 === 1)
-
-          if (isPaymentMonth) {
-            // Calculate escalation based on contract timing
-            let escalationYears = 0
-            if (type === "current" && monthsRemaining) {
-              // For current equipment, calculate how many escalations have occurred
-              const contractMonth = monthsRemaining - month + 1
-              if (contractMonth > 0) {
-                escalationYears = Math.floor((monthsRemaining - contractMonth) / 12)
-              }
-            } else {
-              // For proposed equipment, escalate annually from start
-              escalationYears = Math.floor((month - 1) / 12)
-            }
-
-            let escalatedAmount = monthlyAmount * Math.pow(1 + annualEscalation / 100, escalationYears)
-
-            // Apply evergreen reduction if applicable
-            if (evergreenRental && type === "current" && monthsRemaining && month > monthsRemaining) {
-              escalatedAmount = (escalatedAmount * (reducedRate || 100)) / 100
-            }
-
-            // For quarterly payments, multiply by 3
-            if (paymentFrequency === "quarterly") {
-              escalatedAmount *= 3
-            }
-
-            leaseCost = escalatedAmount
-            monthlyCost += escalatedAmount
-          }
-        }
-
-        // Click charges
-        if (equipment.copyBasedService && equipment.clickCharges) {
-          const yearsPassed = Math.floor((month - 1) / 12)
-          const monthlyGrowthRate = Math.pow(1 + (equipment.clickCharges.black.growthPercent || 0) / 100, 1 / 12) - 1
-
-          // Black clicks
-          const blackVolume = equipment.clickCharges.black.monthlyVolume * Math.pow(1 + monthlyGrowthRate, month - 1)
-          const blackRate =
-            equipment.clickCharges.black.rate *
-            Math.pow(1 + (equipment.clickCharges.black.escalationPercent || 0) / 100, yearsPassed)
-          blackClickCost = blackVolume * blackRate
-          monthlyCost += blackClickCost
-
-          // Color clicks
-          if (equipment.type === "color" && equipment.clickCharges.color) {
-            const colorVolume = equipment.clickCharges.color.monthlyVolume * Math.pow(1 + monthlyGrowthRate, month - 1)
-            const colorRate =
-              equipment.clickCharges.color.rate *
-              Math.pow(1 + (equipment.clickCharges.color.escalationPercent || 0) / 100, yearsPassed)
-            colorClickCost = colorVolume * colorRate
-            monthlyCost += colorClickCost
-          }
-        }
-
-        // Toner costs (simplified calculation)
-        if (!equipment.copyBasedService && equipment.tonerCosts) {
-          const yearsPassed = Math.floor((month - 1) / 12)
-          const escalatedTonerCost =
-            equipment.tonerCosts.blackCostPerCartridge *
-            Math.pow(1 + (equipment.tonerCosts.escalationPercent || 0) / 100, yearsPassed)
-          tonerCost += escalatedTonerCost / 12 // Approximate monthly toner cost
-
-          if (equipment.type === "color" && equipment.tonerCosts.colorCostPerCartridge) {
-            const escalatedColorTonerCost =
-              equipment.tonerCosts.colorCostPerCartridge *
-              Math.pow(1 + (equipment.tonerCosts.escalationPercent || 0) / 100, yearsPassed)
-            tonerCost += escalatedColorTonerCost / 12
-          }
-          monthlyCost += tonerCost
-        }
-
-        // Proposed equipment savings
-        if (equipment.savingsPerMonth) {
-          savingsCost = equipment.savingsPerMonth
-          monthlyCost -= equipment.savingsPerMonth
-        }
-
-        cashFlows.push(monthlyCost)
-        details.push({
-          month,
-          equipment: `${equipment.brand} ${equipment.model}`,
-          lease: leaseCost,
-          blackClicks: blackClickCost,
-          colorClicks: colorClickCost,
-          toner: tonerCost,
-          savings: savingsCost,
-          total: monthlyCost,
-        })
-      }
-
-      return { cashFlows, details }
-    }
-
-    // Calculate total cash flows and detailed breakdown
-    const currentCashFlows = Array(totalMonths).fill(0)
-    const proposedCashFlows = Array(totalMonths).fill(0)
-    const allDetails: DetailedCashFlow[] = []
-
-    currentEquipment.forEach((equipment) => {
-      const { cashFlows, details } = calculateEquipmentCashFlow(equipment, totalMonths, "current")
-      cashFlows.forEach((flow, index) => {
-        currentCashFlows[index] += flow
-      })
-      allDetails.push(...details.map((d) => ({ ...d, equipment: `[Current] ${d.equipment}` })))
-    })
-
-    proposedEquipment.forEach((equipment) => {
-      const { cashFlows, details } = calculateEquipmentCashFlow(equipment, totalMonths, "proposed")
-      cashFlows.forEach((flow, index) => {
-        proposedCashFlows[index] += flow
-      })
-      allDetails.push(...details.map((d) => ({ ...d, equipment: `[Proposed] ${d.equipment}` })))
-    })
-
-    // Calculate NPV
-    const calculateNPV = (cashFlows: number[]): number => {
-      return cashFlows.reduce((npv, cashFlow, index) => {
-        return npv + cashFlow / Math.pow(1 + discountRate, index + 1)
-      }, 0)
-    }
-
-    const currentNPV = calculateNPV(currentCashFlows)
-    const proposedNPV = calculateNPV(proposedCashFlows)
+    // Calculate NPV values
+    const currentNPV = calculateNPV(currentResult.totalCashFlows, monthlyDiscountRate)
+    const proposedNPV = calculateNPV(proposedResult.totalCashFlows, monthlyDiscountRate)
     const npvSavings = currentNPV - proposedNPV
+
+    // Calculate savings flows for payback period
+    const savingsFlows = currentResult.totalCashFlows.map(
+      (current, index) => current - proposedResult.totalCashFlows[index],
+    )
+    const paybackPeriodMonths = calculatePaybackPeriod(savingsFlows)
 
     // Prepare chart data
     const chartData: CashFlowData[] = []
     for (let i = 0; i < totalMonths; i++) {
       chartData.push({
         month: i + 1,
-        current: currentCashFlows[i],
-        proposed: proposedCashFlows[i],
-        savings: currentCashFlows[i] - proposedCashFlows[i],
+        current: currentResult.totalCashFlows[i],
+        proposed: proposedResult.totalCashFlows[i],
+        savings: savingsFlows[i],
       })
     }
 
-    // First month savings
-    const firstMonthSavings = currentCashFlows[0] - proposedCashFlows[0]
+    // Calculate summary metrics
+    const totalCurrentCost = currentResult.totalCashFlows.reduce((sum, cost) => sum + cost, 0)
+    const totalProposedCost = proposedResult.totalCashFlows.reduce((sum, cost) => sum + cost, 0)
+    const firstMonthSavings = savingsFlows[0]
+
+    // Combine all breakdowns
+    const allDetails = [...currentResult.allBreakdowns, ...proposedResult.allBreakdowns]
 
     return {
       chartData,
       currentNPV,
       proposedNPV,
       npvSavings,
-      totalCurrentCost: currentCashFlows.reduce((sum, cost) => sum + cost, 0),
-      totalProposedCost: proposedCashFlows.reduce((sum, cost) => sum + cost, 0),
+      totalCurrentCost,
+      totalProposedCost,
       firstMonthSavings,
       allDetails,
+      currentCashFlows: currentResult.totalCashFlows,
+      proposedCashFlows: proposedResult.totalCashFlows,
+      paybackPeriodMonths,
     }
   }, [currentEquipment, proposedEquipment, analysisYears, discountRateAnnual])
 
   const handleDiscountRateChange = (value: string) => {
     if (value === "custom") {
-      // Allow custom input
       return
     }
     setDiscountRateAnnual(Number.parseInt(value))
@@ -247,8 +132,62 @@ export function AnalysisResults({ clientDetails, currentEquipment, proposedEquip
     }
   }
 
+  const exportToCSV = () => {
+    const headers = [
+      "Month",
+      "Equipment",
+      "Type",
+      "Lease Amount",
+      "Black Click Charges",
+      "Color Click Charges",
+      "Toner Costs",
+      "Other Costs",
+      "Total Monthly Cost",
+      "Escalation Applied",
+      "Is Payment Month",
+      "Post Initial Period",
+    ]
+
+    const csvContent = [
+      headers.join(","),
+      ...analysisData.allDetails.map((detail) =>
+        [
+          detail.month,
+          `"${detail.equipmentName}"`,
+          detail.equipmentType,
+          detail.leaseAmount.toFixed(2),
+          detail.blackClickCharges.toFixed(2),
+          detail.colorClickCharges.toFixed(2),
+          detail.tonerCosts.toFixed(2),
+          detail.otherCosts.toFixed(2),
+          detail.totalMonthlyCost.toFixed(2),
+          detail.escalationApplied,
+          detail.isPaymentMonth,
+          detail.isPostInitialPeriod,
+        ].join(","),
+      ),
+    ].join("\n")
+
+    const blob = new Blob([csvContent], { type: "text/csv" })
+    const url = window.URL.createObjectURL(blob)
+    const a = document.createElement("a")
+    a.href = url
+    a.download = `cash-flow-analysis-${clientDetails.companyName.replace(/\s+/g, "-")}.csv`
+    a.click()
+    window.URL.revokeObjectURL(url)
+  }
+
+  const formatPaybackPeriod = (months: number | null): string => {
+    if (months === null) return "Beyond analysis period"
+    if (months <= 12) return `${months} months`
+    const years = Math.floor(months / 12)
+    const remainingMonths = months % 12
+    return remainingMonths > 0 ? `${years} years, ${remainingMonths} months` : `${years} years`
+  }
+
   return (
     <div className="space-y-6">
+      {/* Analysis Settings */}
       <Card>
         <CardHeader>
           <CardTitle>Analysis Settings</CardTitle>
@@ -309,6 +248,7 @@ export function AnalysisResults({ clientDetails, currentEquipment, proposedEquip
         </CardContent>
       </Card>
 
+      {/* Analysis Summary */}
       <Card>
         <CardHeader>
           <CardTitle>Analysis Summary</CardTitle>
@@ -332,6 +272,7 @@ export function AnalysisResults({ clientDetails, currentEquipment, proposedEquip
         </CardContent>
       </Card>
 
+      {/* Key Metrics */}
       <div className="grid gap-6 md:grid-cols-3">
         <Card>
           <CardHeader>
@@ -378,6 +319,7 @@ export function AnalysisResults({ clientDetails, currentEquipment, proposedEquip
         </Card>
       </div>
 
+      {/* Charts */}
       <Card>
         <CardHeader>
           <CardTitle>Monthly Cash Flow Comparison</CardTitle>
@@ -424,22 +366,13 @@ export function AnalysisResults({ clientDetails, currentEquipment, proposedEquip
           <div className="h-80">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart
-                data={Array.from({ length: analysisYears }, (_, yearIndex) => {
-                  const year = yearIndex + 1
-                  const startMonth = yearIndex * 12
-                  const endMonth = year * 12
-                  const currentYearCost = analysisData.chartData
-                    .slice(startMonth, endMonth)
-                    .reduce((sum, month) => sum + month.current, 0)
-                  const proposedYearCost = analysisData.chartData
-                    .slice(startMonth, endMonth)
-                    .reduce((sum, month) => sum + month.proposed, 0)
-
+                data={calculateAnnualTotals(analysisData.currentCashFlows, analysisYears).map((current, index) => {
+                  const proposed = calculateAnnualTotals(analysisData.proposedCashFlows, analysisYears)[index]
                   return {
-                    year: `Year ${year}`,
-                    current: currentYearCost,
-                    proposed: proposedYearCost,
-                    savings: currentYearCost - proposedYearCost,
+                    year: `Year ${current.year}`,
+                    current: current.total,
+                    proposed: proposed.total,
+                    savings: current.total - proposed.total,
                   }
                 })}
               >
@@ -469,51 +402,104 @@ export function AnalysisResults({ clientDetails, currentEquipment, proposedEquip
         </CardContent>
       </Card>
 
+      {/* Comprehensive Monthly Cash Flow Report */}
       <Card>
-        <CardHeader>
-          <CardTitle>Detailed Cash Flow Analysis</CardTitle>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <CardTitle>Comprehensive Monthly Cash Flow Report</CardTitle>
+          <Button onClick={exportToCSV} variant="outline" size="sm">
+            <Download className="w-4 h-4 mr-2" />
+            Export CSV
+          </Button>
         </CardHeader>
         <CardContent className="overflow-x-auto">
           <Table>
             <TableCaption>
-              Detailed monthly cash flow breakdown for all equipment over {analysisYears * 12} months.
+              Detailed monthly cash flow breakdown for all equipment over {analysisYears * 12} months. Shows
+              escalations, payment timing, and post-initial period adjustments.
             </TableCaption>
             <TableHeader>
               <TableRow>
                 <TableHead className="text-left">Month</TableHead>
                 <TableHead className="text-left">Equipment</TableHead>
-                <TableHead className="text-right">Lease</TableHead>
+                <TableHead className="text-left">Type</TableHead>
+                <TableHead className="text-right">Lease Amount</TableHead>
                 <TableHead className="text-right">Black Clicks</TableHead>
                 <TableHead className="text-right">Color Clicks</TableHead>
-                <TableHead className="text-right">Toner</TableHead>
-                <TableHead className="text-right">Savings</TableHead>
+                <TableHead className="text-right">Toner/Ink</TableHead>
+                <TableHead className="text-right">Other/Savings</TableHead>
                 <TableHead className="text-right">Total</TableHead>
+                <TableHead className="text-center">Escalation</TableHead>
+                <TableHead className="text-center">Payment</TableHead>
+                <TableHead className="text-center">Post-Initial</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {analysisData.allDetails.map((detail, index) => (
-                <TableRow key={index}>
+                <TableRow key={index} className={detail.escalationApplied ? "bg-yellow-50" : ""}>
                   <TableCell className="font-medium">{detail.month}</TableCell>
-                  <TableCell>{detail.equipment}</TableCell>
-                  <TableCell className="text-right">
-                    ${detail.lease.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  <TableCell className="max-w-[200px] truncate" title={detail.equipmentName}>
+                    {detail.equipmentName}
+                  </TableCell>
+                  <TableCell>
+                    <span
+                      className={`px-2 py-1 rounded text-xs ${
+                        detail.equipmentType === "current" ? "bg-red-100 text-red-800" : "bg-blue-100 text-blue-800"
+                      }`}
+                    >
+                      {detail.equipmentType}
+                    </span>
                   </TableCell>
                   <TableCell className="text-right">
                     $
-                    {detail.blackClicks.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    {detail.leaseAmount.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </TableCell>
                   <TableCell className="text-right">
                     $
-                    {detail.colorClicks.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    {detail.blackClickCharges.toLocaleString("en-US", {
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2,
+                    })}
                   </TableCell>
                   <TableCell className="text-right">
-                    ${detail.toner.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    $
+                    {detail.colorClickCharges.toLocaleString("en-US", {
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2,
+                    })}
                   </TableCell>
                   <TableCell className="text-right">
-                    ${detail.savings.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    ${detail.tonerCosts.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </TableCell>
                   <TableCell className="text-right">
-                    ${detail.total.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    ${detail.otherCosts.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </TableCell>
+                  <TableCell className="text-right font-medium">
+                    $
+                    {detail.totalMonthlyCost.toLocaleString("en-US", {
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2,
+                    })}
+                  </TableCell>
+                  <TableCell className="text-center">
+                    {detail.escalationApplied ? (
+                      <span className="text-orange-600 font-medium">✓</span>
+                    ) : (
+                      <span className="text-gray-400">-</span>
+                    )}
+                  </TableCell>
+                  <TableCell className="text-center">
+                    {detail.isPaymentMonth ? (
+                      <span className="text-green-600 font-medium">✓</span>
+                    ) : (
+                      <span className="text-gray-400">-</span>
+                    )}
+                  </TableCell>
+                  <TableCell className="text-center">
+                    {detail.isPostInitialPeriod ? (
+                      <span className="text-purple-600 font-medium">✓</span>
+                    ) : (
+                      <span className="text-gray-400">-</span>
+                    )}
                   </TableCell>
                 </TableRow>
               ))}
@@ -522,6 +508,7 @@ export function AnalysisResults({ clientDetails, currentEquipment, proposedEquip
         </CardContent>
       </Card>
 
+      {/* Summary Cards */}
       <div className="grid gap-6 md:grid-cols-3">
         <Card>
           <CardHeader>
@@ -613,7 +600,7 @@ export function AnalysisResults({ clientDetails, currentEquipment, proposedEquip
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-gray-600">Payback Period:</span>
-                <span className="font-semibold">{analysisData.npvSavings > 0 ? "Immediate" : "N/A"}</span>
+                <span className="font-semibold">{formatPaybackPeriod(analysisData.paybackPeriodMonths)}</span>
               </div>
             </div>
           </CardContent>
