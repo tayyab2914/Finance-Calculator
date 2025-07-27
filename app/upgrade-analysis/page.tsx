@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { ClientDetailsForm } from "@/components/client-details-form"
@@ -88,6 +88,13 @@ export default function UpgradeAnalysisPage() {
       type: "black",
       ownership: "lease",
       copyBasedService: false,
+      leaseDetails: {
+        monthlyAmount: 0,
+        annualEscalation: 0,
+        monthsRemaining: 0,
+        paymentFrequency: "monthly",
+        evergreenRental: false,
+      },
     }
     setCurrentEquipment([...currentEquipment, newEquipment])
   }
@@ -101,6 +108,13 @@ export default function UpgradeAnalysisPage() {
       type: "black",
       ownership: "lease",
       copyBasedService: false,
+      leaseDetails: {
+        monthlyAmount: 0,
+        annualEscalation: 0,
+        monthsRemaining: 0,
+        paymentFrequency: "monthly",
+        evergreenRental: false,
+      },
     }
     setProposedEquipment([...proposedEquipment, newEquipment])
   }
