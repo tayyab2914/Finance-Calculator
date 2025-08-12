@@ -54,7 +54,11 @@ export interface Equipment {
     numberOfColorCartridges?: number
     blackYieldPerUnit: number
     colorYieldPerUnit?: number
-    escalationPercent: number
+    blackVolumeGrowthPercent?: number
+    colorVolumeGrowthPercent?: number
+    blackCostEscalationPercent?: number
+    colorCostEscalationPercent?: number
+    escalationPercent?: number // Keep for backward compatibility
   }
   otherCosts?: Array<{
     category: string
@@ -90,7 +94,7 @@ export default function UpgradeAnalysisPage() {
       location: "",
       type: "black",
       ownership: "lease",
-      copyBasedService: false,
+      copyBasedService: true,
       leaseDetails: {
         monthlyAmount: 0,
         annualEscalation: 0,
@@ -110,7 +114,7 @@ export default function UpgradeAnalysisPage() {
       location: "",
       type: "black",
       ownership: "lease",
-      copyBasedService: false,
+      copyBasedService: true,
       leaseDetails: {
         monthlyAmount: 0,
         annualEscalation: 0,

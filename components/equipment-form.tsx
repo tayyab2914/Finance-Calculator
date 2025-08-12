@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button"
 import { Trash2 } from "lucide-react"
 import type { Equipment } from "@/app/upgrade-analysis/page"
 import { useEffect, useState } from "react"
-import { calculateVolumeTotals, calculateTonerVolumeTotals } from "@/lib/equipment-calculations"
+import { calculateUnifiedVolumeTotals } from "@/lib/equipment-calculations"
 
 interface EquipmentFormProps {
   equipment: Equipment
@@ -89,13 +89,89 @@ export function EquipmentForm({
     })
   }
 
-  // Calculate volume totals for comparison using the modular function
-  const currentTotals = calculateVolumeTotals(allCurrentEquipment)
-  const proposedTotals = calculateVolumeTotals(allProposedEquipment)
+  // Update unified volume settings - sync between click charges and toner costs
+  const updateUnifiedVolume = (colorType: "black" | "color", field: "volume" | "growth", value: any) => {
+    const updates: Partial<Equipment> = {}
 
-  // Calculate toner volume totals for comparison
-  const currentTonerTotals = calculateTonerVolumeTotals(allCurrentEquipment)
-  const proposedTonerTotals = calculateTonerVolumeTotals(allProposedEquipment)
+    if (field === "volume") {
+      // Update both click charges and toner costs volume
+      if (colorType === "black") {
+        updates.clickCharges = {
+          ...equipment.clickCharges,
+          black: {
+            ...equipment.clickCharges?.black,
+            monthlyVolume: value,
+          },
+        } as any
+        updates.tonerCosts = {
+          ...equipment.tonerCosts,
+          blackMonthlyVolume: value,
+        } as any
+      } else {
+        updates.clickCharges = {
+          ...equipment.clickCharges,
+          color: {
+            ...equipment.clickCharges?.color,
+            monthlyVolume: value,
+          },
+        } as any
+        updates.tonerCosts = {
+          ...equipment.tonerCosts,
+          colorMonthlyVolume: value,
+        } as any
+      }
+    } else if (field === "growth") {
+      // Update both click charges and toner costs growth
+      if (colorType === "black") {
+        updates.clickCharges = {
+          ...equipment.clickCharges,
+          black: {
+            ...equipment.clickCharges?.black,
+            growthPercent: value,
+          },
+        } as any
+        updates.tonerCosts = {
+          ...equipment.tonerCosts,
+          blackVolumeGrowthPercent: value,
+        } as any
+      } else {
+        updates.clickCharges = {
+          ...equipment.clickCharges,
+          color: {
+            ...equipment.clickCharges?.color,
+            growthPercent: value,
+          },
+        } as any
+        updates.tonerCosts = {
+          ...equipment.tonerCosts,
+          colorVolumeGrowthPercent: value,
+        } as any
+      }
+    }
+
+    onChange(updates)
+  }
+
+  // Get unified volume values (prefer click charges, fallback to toner costs)
+  const getUnifiedVolume = (colorType: "black" | "color", field: "volume" | "growth") => {
+    if (field === "volume") {
+      if (colorType === "black") {
+        return equipment.clickCharges?.black?.monthlyVolume || equipment.tonerCosts?.blackMonthlyVolume || ""
+      } else {
+        return equipment.clickCharges?.color?.monthlyVolume || equipment.tonerCosts?.colorMonthlyVolume || ""
+      }
+    } else {
+      if (colorType === "black") {
+        return equipment.clickCharges?.black?.growthPercent || equipment.tonerCosts?.blackVolumeGrowthPercent || ""
+      } else {
+        return equipment.clickCharges?.color?.growthPercent || equipment.tonerCosts?.colorVolumeGrowthPercent || ""
+      }
+    }
+  }
+
+  // Calculate unified volume totals for comparison
+  const currentTotals = calculateUnifiedVolumeTotals(allCurrentEquipment)
+  const proposedTotals = calculateUnifiedVolumeTotals(allProposedEquipment)
 
   return (
     <Card>
@@ -326,6 +402,107 @@ export function EquipmentForm({
           </Card>
         )}
 
+        {/* Volume and Growth Settings - Unified for both Click and Toner */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Volume and Growth Settings</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {/* Monthly Volumes */}
+            <div className="space-y-4">
+              <h4 className="font-medium text-gray-900">Monthly Volumes</h4>
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-2">
+                  <Label>Black Monthly Volume</Label>
+                  <Input
+                    type="number"
+                    value={getUnifiedVolume("black", "volume")}
+                    onChange={(e) => updateUnifiedVolume("black", "volume", Number.parseInt(e.target.value) || 0)}
+                    placeholder="0"
+                  />
+                </div>
+                {equipment.type === "color" && (
+                  <div className="space-y-2">
+                    <Label>Color Monthly Volume</Label>
+                    <Input
+                      type="number"
+                      value={getUnifiedVolume("color", "volume")}
+                      onChange={(e) => updateUnifiedVolume("color", "volume", Number.parseInt(e.target.value) || 0)}
+                      placeholder="0"
+                    />
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Volume Growth Rates */}
+            <div className="space-y-4">
+              <h4 className="font-medium text-gray-900">Annual Volume Growth Rates</h4>
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-2">
+                  <Label>Black Volume Growth % (Annual)</Label>
+                  <Input
+                    type="number"
+                    value={getUnifiedVolume("black", "growth")}
+                    onChange={(e) => updateUnifiedVolume("black", "growth", e.target.value)}
+                    placeholder="0.00"
+                  />
+                </div>
+                {equipment.type === "color" && (
+                  <div className="space-y-2">
+                    <Label>Color Volume Growth % (Annual)</Label>
+                    <Input
+                      type="number"
+                      value={getUnifiedVolume("color", "growth")}
+                      onChange={(e) => updateUnifiedVolume("color", "growth", e.target.value)}
+                      placeholder="0.00"
+                    />
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Unified Volume Comparison Table for Proposed Equipment */}
+            {type === "proposed" && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-sm">Volume Comparison</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-2 text-sm">
+                    <div className="grid grid-cols-3 gap-4 font-medium">
+                      <span>Type</span>
+                      <span>Current Total</span>
+                      <span>Proposed Total</span>
+                    </div>
+                    <div className="grid grid-cols-3 gap-4">
+                      <span>Black Volume</span>
+                      <span>{currentTotals.black.toLocaleString()}</span>
+                      <span
+                        className={proposedTotals.black !== currentTotals.black ? "text-orange-600 font-medium" : ""}
+                      >
+                        {proposedTotals.black.toLocaleString()}
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-3 gap-4">
+                      <span>Color Volume</span>
+                      <span>{currentTotals.color.toLocaleString()}</span>
+                      <span
+                        className={proposedTotals.color !== currentTotals.color ? "text-orange-600 font-medium" : ""}
+                      >
+                        {proposedTotals.color.toLocaleString()}
+                      </span>
+                    </div>
+                    {(proposedTotals.black !== currentTotals.black || proposedTotals.color !== currentTotals.color) && (
+                      <p className="text-orange-600 text-xs mt-2">⚠️ Proposed volumes don't match current volumes</p>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+          </CardContent>
+        </Card>
+
         {/* Click Charges */}
         {equipment.copyBasedService && (
           <Card>
@@ -357,28 +534,6 @@ export function EquipmentForm({
                     />
                   </div>
                 </div>
-                <div className="grid gap-4 md:grid-cols-2">
-                  <div className="space-y-2">
-                    <Label>Monthly Volume</Label>
-                    <Input
-                      type="number"
-                      value={equipment.clickCharges?.black?.monthlyVolume || ""}
-                      onChange={(e) =>
-                        updateClickCharges("black", "monthlyVolume", Number.parseInt(e.target.value) || 0)
-                      }
-                      placeholder="0"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Annual Volume Growth Rate %</Label>
-                    <Input
-                      type="number"
-                      value={equipment.clickCharges?.black?.growthPercent || ""}
-                      onChange={(e) => updateClickCharges("black", "growthPercent", e.target.value)}
-                      placeholder="0.00"
-                    />
-                  </div>
-                </div>
               </div>
 
               {/* Color Click Charges */}
@@ -406,69 +561,7 @@ export function EquipmentForm({
                       />
                     </div>
                   </div>
-                  <div className="grid gap-4 md:grid-cols-2">
-                    <div className="space-y-2">
-                      <Label>Monthly Volume</Label>
-                      <Input
-                        type="number"
-                        value={equipment.clickCharges?.color?.monthlyVolume || ""}
-                        onChange={(e) =>
-                          updateClickCharges("color", "monthlyVolume", Number.parseInt(e.target.value) || 0)
-                        }
-                        placeholder="0"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Annual Volume Growth Rate %</Label>
-                      <Input
-                        type="number"
-                        value={equipment.clickCharges?.color?.growthPercent || ""}
-                        onChange={(e) => updateClickCharges("color", "growthPercent", e.target.value)}
-                        placeholder="0.00"
-                      />
-                    </div>
-                  </div>
                 </div>
-              )}
-
-              {/* Volume Comparison Table for Proposed Equipment */}
-              {type === "proposed" && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-sm">Click Volume Comparison</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-2 text-sm">
-                      <div className="grid grid-cols-3 gap-4 font-medium">
-                        <span>Type</span>
-                        <span>Current Total</span>
-                        <span>Proposed Total</span>
-                      </div>
-                      <div className="grid grid-cols-3 gap-4">
-                        <span>Black Volume</span>
-                        <span>{currentTotals.black.toLocaleString()}</span>
-                        <span
-                          className={proposedTotals.black !== currentTotals.black ? "text-orange-600 font-medium" : ""}
-                        >
-                          {proposedTotals.black.toLocaleString()}
-                        </span>
-                      </div>
-                      <div className="grid grid-cols-3 gap-4">
-                        <span>Color Volume</span>
-                        <span>{currentTotals.color.toLocaleString()}</span>
-                        <span
-                          className={proposedTotals.color !== currentTotals.color ? "text-orange-600 font-medium" : ""}
-                        >
-                          {proposedTotals.color.toLocaleString()}
-                        </span>
-                      </div>
-                      {(proposedTotals.black !== currentTotals.black ||
-                        proposedTotals.color !== currentTotals.color) && (
-                        <p className="text-orange-600 text-xs mt-2">⚠️ Proposed volumes don't match current volumes</p>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
               )}
             </CardContent>
           </Card>
@@ -481,33 +574,6 @@ export function EquipmentForm({
               <CardTitle className="text-base">Toner/Ink Costs</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              {/* Monthly Volume Fields */}
-              <div className="space-y-4">
-                <h4 className="font-medium">Monthly Volume</h4>
-                <div className="grid gap-4 md:grid-cols-2">
-                  <div className="space-y-2">
-                    <Label>Black Monthly Volume</Label>
-                    <Input
-                      type="number"
-                      value={equipment.tonerCosts?.blackMonthlyVolume || ""}
-                      onChange={(e) => updateTonerCosts("blackMonthlyVolume", Number.parseInt(e.target.value) || 0)}
-                      placeholder="0"
-                    />
-                  </div>
-                  {equipment.type === "color" && (
-                    <div className="space-y-2">
-                      <Label>Color Monthly Volume</Label>
-                      <Input
-                        type="number"
-                        value={equipment.tonerCosts?.colorMonthlyVolume || ""}
-                        onChange={(e) => updateTonerCosts("colorMonthlyVolume", Number.parseInt(e.target.value) || 0)}
-                        placeholder="0"
-                      />
-                    </div>
-                  )}
-                </div>
-              </div>
-
               {/* Cartridge Costs */}
               <div className="space-y-4">
                 <h4 className="font-medium">Cartridge Costs</h4>
@@ -573,63 +639,34 @@ export function EquipmentForm({
                     </div>
                   )}
                 </div>
-                <div className="space-y-2">
-                  <Label>Escalation % (Annual)</Label>
-                  <Input
-                    type="number"
-                    value={equipment.tonerCosts?.escalationPercent || ""}
-                    onChange={(e) => updateTonerCosts("escalationPercent", e.target.value)}
-                    placeholder="0.00"
-                    className="w-full md:w-1/3"
-                  />
-                </div>
               </div>
 
-              {/* Toner Volume Comparison Table for Proposed Equipment */}
-              {type === "proposed" && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-sm">Toner Volume Comparison</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-2 text-sm">
-                      <div className="grid grid-cols-3 gap-4 font-medium">
-                        <span>Type</span>
-                        <span>Current Total</span>
-                        <span>Proposed Total</span>
-                      </div>
-                      <div className="grid grid-cols-3 gap-4">
-                        <span>Black Volume</span>
-                        <span>{currentTonerTotals.black.toLocaleString()}</span>
-                        <span
-                          className={
-                            proposedTonerTotals.black !== currentTonerTotals.black ? "text-orange-600 font-medium" : ""
-                          }
-                        >
-                          {proposedTonerTotals.black.toLocaleString()}
-                        </span>
-                      </div>
-                      <div className="grid grid-cols-3 gap-4">
-                        <span>Color Volume</span>
-                        <span>{currentTonerTotals.color.toLocaleString()}</span>
-                        <span
-                          className={
-                            proposedTonerTotals.color !== currentTonerTotals.color ? "text-orange-600 font-medium" : ""
-                          }
-                        >
-                          {proposedTonerTotals.color.toLocaleString()}
-                        </span>
-                      </div>
-                      {(proposedTonerTotals.black !== currentTonerTotals.black ||
-                        proposedTonerTotals.color !== currentTonerTotals.color) && (
-                        <p className="text-orange-600 text-xs mt-2">
-                          ⚠️ Proposed toner volumes don't match current volumes
-                        </p>
-                      )}
+              {/* Annual Cost Increases */}
+              <div className="space-y-4">
+                <h4 className="font-medium">Annual Cost Increases</h4>
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label>Black Toner/Ink Cost Increase % (Annual)</Label>
+                    <Input
+                      type="number"
+                      value={equipment.tonerCosts?.blackCostEscalationPercent || ""}
+                      onChange={(e) => updateTonerCosts("blackCostEscalationPercent", e.target.value)}
+                      placeholder="0.00"
+                    />
+                  </div>
+                  {equipment.type === "color" && (
+                    <div className="space-y-2">
+                      <Label>Color Toner/Ink Cost Increase % (Annual)</Label>
+                      <Input
+                        type="number"
+                        value={equipment.tonerCosts?.colorCostEscalationPercent || ""}
+                        onChange={(e) => updateTonerCosts("colorCostEscalationPercent", e.target.value)}
+                        placeholder="0.00"
+                      />
                     </div>
-                  </CardContent>
-                </Card>
-              )}
+                  )}
+                </div>
+              </div>
             </CardContent>
           </Card>
         )}
