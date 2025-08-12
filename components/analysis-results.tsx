@@ -185,19 +185,21 @@ export function AnalysisResults({
 
   const handleDiscountRateChange = (value: string) => {
     if (value === "custom") {
-      return
+      // When custom is selected, keep the current discount rate but show the input
+      setCustomDiscountRate(discountRateAnnual.toString());
+      return;
     }
-    setDiscountRateAnnual(Number.parseInt(value))
-    setCustomDiscountRate("")
-  }
+    setDiscountRateAnnual(Number.parseFloat(value));
+    setCustomDiscountRate(""); // Clear custom value when a preset is selected
+  };
 
   const handleCustomDiscountRateChange = (value: string) => {
-    setCustomDiscountRate(value)
-    const numValue = Number.parseFloat(value)
+    setCustomDiscountRate(value);
+    const numValue = Number.parseFloat(value);
     if (!isNaN(numValue) && numValue > 0) {
-      setDiscountRateAnnual(numValue)
+      setDiscountRateAnnual(numValue);
     }
-  }
+  };
 
   const toggleEquipment = (equipmentId: string) => {
     setOpenEquipment((prev) =>
@@ -255,28 +257,42 @@ export function AnalysisResults({
 
       // Current Equipment CSV
       if (currentEquipment.length > 0) {
-        const currentHeaders = ["Month", ...currentEquipment.map((eq) => `${eq.brand} ${eq.model}`), "Total"]
+        const currentHeaders = [
+          "Month",
+          ...currentEquipment.map((eq) => `${eq.brand} ${eq.model}`),
+          "Total"
+        ];
+
         const currentCsvContent = [
           currentHeaders.join(","),
           ...currentEquipmentTotalsData.map((row) => {
-            const values = [row.month]
-            currentEquipment.forEach((eq) => {
-              const equipmentName = `${eq.brand} ${eq.model}`
-              values.push((row[equipmentName] || 0).toFixed(2))
-            })
-            values.push((row["Total"] || 0).toFixed(2))
-            return values.join(",")
-          }),
-        ].join("\n")
+            const values: string[] = [];
 
-        const currentBlob = new Blob([currentCsvContent], { type: "text/csv" })
-        const currentUrl = window.URL.createObjectURL(currentBlob)
-        const currentA = document.createElement("a")
-        currentA.href = currentUrl
-        currentA.download = `current-equipment-totals-${clientDetails.companyName.replace(/\s+/g, "-")}.csv`
-        currentA.click()
-        window.URL.revokeObjectURL(currentUrl)
+            // Ensure month is string
+            values.push(String(row.month));
+
+            // Push equipment values
+            currentEquipment.forEach((eq) => {
+              const equipmentName = `${eq.brand} ${eq.model}`;
+              values.push(Number(row[equipmentName] || 0).toFixed(2));
+            });
+
+            // Push total
+            values.push(Number(row["Total"] || 0).toFixed(2));
+
+            return values.join(",");
+          }),
+        ].join("\n");
+
+        const currentBlob = new Blob([currentCsvContent], { type: "text/csv" });
+        const currentUrl = window.URL.createObjectURL(currentBlob);
+        const currentA = document.createElement("a");
+        currentA.href = currentUrl;
+        currentA.download = `current-equipment-totals-${clientDetails.companyName.replace(/\s+/g, "-")}.csv`;
+        currentA.click();
+        window.URL.revokeObjectURL(currentUrl);
       }
+
 
       // Proposed Equipment CSV
       if (proposedEquipment.length > 0) {
@@ -287,9 +303,9 @@ export function AnalysisResults({
             const values = [row.month]
             proposedEquipment.forEach((eq) => {
               const equipmentName = `${eq.brand} ${eq.model}`
-              values.push((row[equipmentName] || 0).toFixed(2))
+              values.push(Number((row[equipmentName] || 0).toFixed(2)))
             })
-            values.push((row["Total"] || 0).toFixed(2))
+            values.push(Number((row["Total"] || 0).toFixed(2)))
             return values.join(",")
           }),
         ].join("\n")
