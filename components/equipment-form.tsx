@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button"
 import { Trash2 } from "lucide-react"
 import type { Equipment } from "@/app/upgrade-analysis/page"
 import { useEffect, useState } from "react"
-import { calculateVolumeTotals } from "@/lib/equipment-calculations"
+import { calculateVolumeTotals, calculateTonerVolumeTotals } from "@/lib/equipment-calculations"
 
 interface EquipmentFormProps {
   equipment: Equipment
@@ -35,7 +35,7 @@ export function EquipmentForm({
 
   useEffect(() => {
     if (equipment.cashPrice !== undefined && equipment.settlement !== undefined) {
-      const newSellingPrice = equipment.cashPrice + equipment.settlement
+      const newSellingPrice = Number(equipment.cashPrice) + Number(equipment.settlement)
       setSellingPrice(newSellingPrice)
       onChange({ sellingPrice: newSellingPrice })
     } else {
@@ -49,7 +49,8 @@ export function EquipmentForm({
       equipment.cashPrice !== undefined &&
       equipment.settlement !== undefined
     ) {
-      const newRentalAmount = (equipment.cashPrice + equipment.settlement) * equipment.rentalFactor
+      const newRentalAmount =
+        (Number(equipment.cashPrice) + Number(equipment.settlement)) * Number(equipment.rentalFactor)
       setRentalAmount(newRentalAmount)
       // Update the lease details with calculated rental amount
       updateLeaseDetails("monthlyAmount", newRentalAmount)
@@ -91,6 +92,10 @@ export function EquipmentForm({
   // Calculate volume totals for comparison using the modular function
   const currentTotals = calculateVolumeTotals(allCurrentEquipment)
   const proposedTotals = calculateVolumeTotals(allProposedEquipment)
+
+  // Calculate toner volume totals for comparison
+  const currentTonerTotals = calculateTonerVolumeTotals(allCurrentEquipment)
+  const proposedTonerTotals = calculateTonerVolumeTotals(allProposedEquipment)
 
   return (
     <Card>
@@ -196,7 +201,7 @@ export function EquipmentForm({
                     type="number"
                     value={equipment.cashPrice || ""}
                     onChange={(e) => {
-                      const newCashPrice = Number.parseFloat(e.target.value) || 0
+                      const newCashPrice = e.target.value
                       onChange({ cashPrice: newCashPrice })
                     }}
                     placeholder="0.00"
@@ -208,7 +213,7 @@ export function EquipmentForm({
                     type="number"
                     value={equipment.settlement || ""}
                     onChange={(e) => {
-                      const newSettlement = Number.parseFloat(e.target.value) || 0
+                      const newSettlement = e.target.value
                       onChange({ settlement: newSettlement })
                     }}
                     placeholder="0.00"
@@ -227,7 +232,7 @@ export function EquipmentForm({
                     step="0.000001"
                     value={equipment.rentalFactor || ""}
                     onChange={(e) => {
-                      const newRentalFactor = Number.parseFloat(e.target.value) || 0
+                      const newRentalFactor = e.target.value
                       onChange({ rentalFactor: newRentalFactor })
                     }}
                     placeholder="0.000000"
@@ -255,7 +260,7 @@ export function EquipmentForm({
                   <Input
                     type="number"
                     value={equipment.leaseDetails?.monthlyAmount || ""}
-                    onChange={(e) => updateLeaseDetails("monthlyAmount", Number.parseFloat(e.target.value) || 0)}
+                    onChange={(e) => updateLeaseDetails("monthlyAmount", e.target.value)}
                     placeholder="0.00"
                   />
                 </div>
@@ -264,7 +269,7 @@ export function EquipmentForm({
                   <Input
                     type="number"
                     value={equipment.leaseDetails?.annualEscalation || ""}
-                    onChange={(e) => updateLeaseDetails("annualEscalation", Number.parseFloat(e.target.value) || 0)}
+                    onChange={(e) => updateLeaseDetails("annualEscalation", e.target.value)}
                     placeholder="0.00"
                   />
                 </div>
@@ -311,7 +316,7 @@ export function EquipmentForm({
                   <Input
                     type="number"
                     value={equipment.leaseDetails?.reducedRate || ""}
-                    onChange={(e) => updateLeaseDetails("reducedRate", Number.parseFloat(e.target.value) || 0)}
+                    onChange={(e) => updateLeaseDetails("reducedRate", e.target.value)}
                     placeholder="0.00"
                   />
                   <p className="text-sm text-muted-foreground">If the lease/rental reduces by 20%, enter 80%</p>
@@ -338,7 +343,7 @@ export function EquipmentForm({
                       type="number"
                       step="0.001"
                       value={equipment.clickCharges?.black?.rate || ""}
-                      onChange={(e) => updateClickCharges("black", "rate", Number.parseFloat(e.target.value) || 0)}
+                      onChange={(e) => updateClickCharges("black", "rate", e.target.value)}
                       placeholder="0.000"
                     />
                   </div>
@@ -347,9 +352,7 @@ export function EquipmentForm({
                     <Input
                       type="number"
                       value={equipment.clickCharges?.black?.escalationPercent || ""}
-                      onChange={(e) =>
-                        updateClickCharges("black", "escalationPercent", Number.parseFloat(e.target.value) || 0)
-                      }
+                      onChange={(e) => updateClickCharges("black", "escalationPercent", e.target.value)}
                       placeholder="0.00"
                     />
                   </div>
@@ -371,9 +374,7 @@ export function EquipmentForm({
                     <Input
                       type="number"
                       value={equipment.clickCharges?.black?.growthPercent || ""}
-                      onChange={(e) =>
-                        updateClickCharges("black", "growthPercent", Number.parseFloat(e.target.value) || 0)
-                      }
+                      onChange={(e) => updateClickCharges("black", "growthPercent", e.target.value)}
                       placeholder="0.00"
                     />
                   </div>
@@ -391,7 +392,7 @@ export function EquipmentForm({
                         type="number"
                         step="0.001"
                         value={equipment.clickCharges?.color?.rate || ""}
-                        onChange={(e) => updateClickCharges("color", "rate", Number.parseFloat(e.target.value) || 0)}
+                        onChange={(e) => updateClickCharges("color", "rate", e.target.value)}
                         placeholder="0.000"
                       />
                     </div>
@@ -400,9 +401,7 @@ export function EquipmentForm({
                       <Input
                         type="number"
                         value={equipment.clickCharges?.color?.escalationPercent || ""}
-                        onChange={(e) =>
-                          updateClickCharges("color", "escalationPercent", Number.parseFloat(e.target.value) || 0)
-                        }
+                        onChange={(e) => updateClickCharges("color", "escalationPercent", e.target.value)}
                         placeholder="0.00"
                       />
                     </div>
@@ -424,9 +423,7 @@ export function EquipmentForm({
                       <Input
                         type="number"
                         value={equipment.clickCharges?.color?.growthPercent || ""}
-                        onChange={(e) =>
-                          updateClickCharges("color", "growthPercent", Number.parseFloat(e.target.value) || 0)
-                        }
+                        onChange={(e) => updateClickCharges("color", "growthPercent", e.target.value)}
                         placeholder="0.00"
                       />
                     </div>
@@ -438,7 +435,7 @@ export function EquipmentForm({
               {type === "proposed" && (
                 <Card>
                   <CardHeader>
-                    <CardTitle className="text-sm">Volume Comparison</CardTitle>
+                    <CardTitle className="text-sm">Click Volume Comparison</CardTitle>
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-2 text-sm">
@@ -484,59 +481,155 @@ export function EquipmentForm({
               <CardTitle className="text-base">Toner/Ink Costs</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid gap-4 md:grid-cols-2">
-                <div className="space-y-2">
-                  <Label>Black Cost per Cartridge</Label>
-                  <Input
-                    type="number"
-                    value={equipment.tonerCosts?.blackCostPerCartridge || ""}
-                    onChange={(e) => updateTonerCosts("blackCostPerCartridge", Number.parseFloat(e.target.value) || 0)}
-                    placeholder="0.00"
-                  />
-                </div>
-                {equipment.type === "color" && (
+              {/* Monthly Volume Fields */}
+              <div className="space-y-4">
+                <h4 className="font-medium">Monthly Volume</h4>
+                <div className="grid gap-4 md:grid-cols-2">
                   <div className="space-y-2">
-                    <Label>Color Cost per Cartridge</Label>
+                    <Label>Black Monthly Volume</Label>
                     <Input
                       type="number"
-                      value={equipment.tonerCosts?.colorCostPerCartridge || ""}
-                      onChange={(e) =>
-                        updateTonerCosts("colorCostPerCartridge", Number.parseFloat(e.target.value) || 0)
-                      }
+                      value={equipment.tonerCosts?.blackMonthlyVolume || ""}
+                      onChange={(e) => updateTonerCosts("blackMonthlyVolume", Number.parseInt(e.target.value) || 0)}
+                      placeholder="0"
+                    />
+                  </div>
+                  {equipment.type === "color" && (
+                    <div className="space-y-2">
+                      <Label>Color Monthly Volume</Label>
+                      <Input
+                        type="number"
+                        value={equipment.tonerCosts?.colorMonthlyVolume || ""}
+                        onChange={(e) => updateTonerCosts("colorMonthlyVolume", Number.parseInt(e.target.value) || 0)}
+                        placeholder="0"
+                      />
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Cartridge Costs */}
+              <div className="space-y-4">
+                <h4 className="font-medium">Cartridge Costs</h4>
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label>Black Cost per Cartridge</Label>
+                    <Input
+                      type="number"
+                      value={equipment.tonerCosts?.blackCostPerCartridge || ""}
+                      onChange={(e) => updateTonerCosts("blackCostPerCartridge", e.target.value)}
                       placeholder="0.00"
                     />
                   </div>
-                )}
-              </div>
-              <div className="grid gap-4 md:grid-cols-3">
-                <div className="space-y-2">
-                  <Label>Number of Cartridges</Label>
-                  <Input
-                    type="number"
-                    value={equipment.tonerCosts?.numberOfCartridges || ""}
-                    onChange={(e) => updateTonerCosts("numberOfCartridges", Number.parseInt(e.target.value) || 0)}
-                    placeholder="0"
-                  />
+                  {equipment.type === "color" && (
+                    <div className="space-y-2">
+                      <Label>Color Cost per Cartridge</Label>
+                      <Input
+                        type="number"
+                        value={equipment.tonerCosts?.colorCostPerCartridge || ""}
+                        onChange={(e) => updateTonerCosts("colorCostPerCartridge", e.target.value)}
+                        placeholder="0.00"
+                      />
+                    </div>
+                  )}
                 </div>
-                <div className="space-y-2">
-                  <Label>Yield per Unit</Label>
-                  <Input
-                    type="number"
-                    value={equipment.tonerCosts?.yieldPerUnit || ""}
-                    onChange={(e) => updateTonerCosts("yieldPerUnit", Number.parseInt(e.target.value) || 0)}
-                    placeholder="0"
-                  />
+              </div>
+
+              {/* Cartridge Specifications */}
+              <div className="space-y-4">
+                <h4 className="font-medium">Cartridge Specifications</h4>
+                <div className="grid gap-4 md:grid-cols-3">
+                  {equipment.type === "color" && (
+                    <div className="space-y-2">
+                      <Label>Number of Color Cartridges</Label>
+                      <Input
+                        type="number"
+                        value={equipment.tonerCosts?.numberOfColorCartridges || ""}
+                        onChange={(e) =>
+                          updateTonerCosts("numberOfColorCartridges", Number.parseInt(e.target.value) || 0)
+                        }
+                        placeholder="0"
+                      />
+                    </div>
+                  )}
+                  <div className="space-y-2">
+                    <Label>Black Yield per Unit</Label>
+                    <Input
+                      type="number"
+                      value={equipment.tonerCosts?.blackYieldPerUnit || ""}
+                      onChange={(e) => updateTonerCosts("blackYieldPerUnit", Number.parseInt(e.target.value) || 0)}
+                      placeholder="0"
+                    />
+                  </div>
+                  {equipment.type === "color" && (
+                    <div className="space-y-2">
+                      <Label>Color Yield per Unit</Label>
+                      <Input
+                        type="number"
+                        value={equipment.tonerCosts?.colorYieldPerUnit || ""}
+                        onChange={(e) => updateTonerCosts("colorYieldPerUnit", Number.parseInt(e.target.value) || 0)}
+                        placeholder="0"
+                      />
+                    </div>
+                  )}
                 </div>
                 <div className="space-y-2">
                   <Label>Escalation % (Annual)</Label>
                   <Input
                     type="number"
                     value={equipment.tonerCosts?.escalationPercent || ""}
-                    onChange={(e) => updateTonerCosts("escalationPercent", Number.parseFloat(e.target.value) || 0)}
+                    onChange={(e) => updateTonerCosts("escalationPercent", e.target.value)}
                     placeholder="0.00"
+                    className="w-full md:w-1/3"
                   />
                 </div>
               </div>
+
+              {/* Toner Volume Comparison Table for Proposed Equipment */}
+              {type === "proposed" && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-sm">Toner Volume Comparison</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-2 text-sm">
+                      <div className="grid grid-cols-3 gap-4 font-medium">
+                        <span>Type</span>
+                        <span>Current Total</span>
+                        <span>Proposed Total</span>
+                      </div>
+                      <div className="grid grid-cols-3 gap-4">
+                        <span>Black Volume</span>
+                        <span>{currentTonerTotals.black.toLocaleString()}</span>
+                        <span
+                          className={
+                            proposedTonerTotals.black !== currentTonerTotals.black ? "text-orange-600 font-medium" : ""
+                          }
+                        >
+                          {proposedTonerTotals.black.toLocaleString()}
+                        </span>
+                      </div>
+                      <div className="grid grid-cols-3 gap-4">
+                        <span>Color Volume</span>
+                        <span>{currentTonerTotals.color.toLocaleString()}</span>
+                        <span
+                          className={
+                            proposedTonerTotals.color !== currentTonerTotals.color ? "text-orange-600 font-medium" : ""
+                          }
+                        >
+                          {proposedTonerTotals.color.toLocaleString()}
+                        </span>
+                      </div>
+                      {(proposedTonerTotals.black !== currentTonerTotals.black ||
+                        proposedTonerTotals.color !== currentTonerTotals.color) && (
+                        <p className="text-orange-600 text-xs mt-2">
+                          ⚠️ Proposed toner volumes don't match current volumes
+                        </p>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
             </CardContent>
           </Card>
         )}
@@ -548,7 +641,7 @@ export function EquipmentForm({
             <Input
               type="number"
               value={equipment.savingsPerMonth || ""}
-              onChange={(e) => onChange({ savingsPerMonth: Number.parseFloat(e.target.value) || 0 })}
+              onChange={(e) => onChange({ savingsPerMonth: e.target.value })}
               placeholder="0.00"
             />
           </div>

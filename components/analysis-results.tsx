@@ -16,16 +16,18 @@ import {
   Bar,
 } from "recharts"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Button } from "@/components/ui/button"
-import { Download } from "lucide-react"
+import { Download, ChevronDown, ChevronRight, Monitor, Printer } from "lucide-react"
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 import {
   aggregateEquipmentCashFlows,
   calculateNPV,
   calculatePaybackPeriod,
   calculateAnnualTotals,
+  calculateEquipmentCashFlow,
   type MonthlyBreakdown,
 } from "@/lib/equipment-calculations"
 
@@ -33,6 +35,7 @@ interface AnalysisResultsProps {
   clientDetails: ClientDetails
   currentEquipment: Equipment[]
   proposedEquipment: Equipment[]
+  onNavigateBack?: () => void
 }
 
 interface CashFlowData {
@@ -56,10 +59,22 @@ interface AnalysisData {
   paybackPeriodMonths: number | null
 }
 
-export function AnalysisResults({ clientDetails, currentEquipment, proposedEquipment }: AnalysisResultsProps) {
+interface EquipmentTotalsData {
+  month: number
+  [key: string]: number // Dynamic equipment columns + total
+}
+
+export function AnalysisResults({
+  clientDetails,
+  currentEquipment,
+  proposedEquipment,
+  onNavigateBack,
+}: AnalysisResultsProps) {
   const [analysisYears, setAnalysisYears] = useState<number>(5)
   const [discountRateAnnual, setDiscountRateAnnual] = useState<number>(8)
   const [customDiscountRate, setCustomDiscountRate] = useState<string>("")
+  const [openEquipment, setOpenEquipment] = useState<string[]>([])
+  const [viewMode, setViewMode] = useState<"individual" | "totals">("individual")
 
   const analysisData = useMemo((): AnalysisData => {
     const monthlyDiscountRate = discountRateAnnual / 100 / 12
@@ -116,6 +131,58 @@ export function AnalysisResults({ clientDetails, currentEquipment, proposedEquip
     }
   }, [currentEquipment, proposedEquipment, analysisYears, discountRateAnnual])
 
+  // Generate current equipment totals data
+  const currentEquipmentTotalsData = useMemo((): EquipmentTotalsData[] => {
+    const totalMonths = analysisYears * 12
+    const data: EquipmentTotalsData[] = []
+
+    for (let month = 1; month <= totalMonths; month++) {
+      const monthData: EquipmentTotalsData = { month }
+      let monthTotal = 0
+
+      currentEquipment.forEach((equipment) => {
+        const cashFlowData = calculateEquipmentCashFlow(equipment, totalMonths, "current")
+        const monthlyBreakdown = cashFlowData.monthlyBreakdowns.find((b) => b.month === month)
+        const equipmentName = `${equipment.brand} ${equipment.model}`
+        const value = monthlyBreakdown?.totalMonthlyCost || 0
+
+        monthData[equipmentName] = value
+        monthTotal += value
+      })
+
+      monthData["Total"] = monthTotal
+      data.push(monthData)
+    }
+
+    return data
+  }, [currentEquipment, analysisYears])
+
+  // Generate proposed equipment totals data
+  const proposedEquipmentTotalsData = useMemo((): EquipmentTotalsData[] => {
+    const totalMonths = analysisYears * 12
+    const data: EquipmentTotalsData[] = []
+
+    for (let month = 1; month <= totalMonths; month++) {
+      const monthData: EquipmentTotalsData = { month }
+      let monthTotal = 0
+
+      proposedEquipment.forEach((equipment) => {
+        const cashFlowData = calculateEquipmentCashFlow(equipment, totalMonths, "proposed")
+        const monthlyBreakdown = cashFlowData.monthlyBreakdowns.find((b) => b.month === month)
+        const equipmentName = `${equipment.brand} ${equipment.model}`
+        const value = monthlyBreakdown?.totalMonthlyCost || 0
+
+        monthData[equipmentName] = value
+        monthTotal += value
+      })
+
+      monthData["Total"] = monthTotal
+      data.push(monthData)
+    }
+
+    return data
+  }, [proposedEquipment, analysisYears])
+
   const handleDiscountRateChange = (value: string) => {
     if (value === "custom") {
       return
@@ -132,49 +199,110 @@ export function AnalysisResults({ clientDetails, currentEquipment, proposedEquip
     }
   }
 
+  const toggleEquipment = (equipmentId: string) => {
+    setOpenEquipment((prev) =>
+      prev.includes(equipmentId) ? prev.filter((id) => id !== equipmentId) : [...prev, equipmentId],
+    )
+  }
+
   const exportToCSV = () => {
-    const headers = [
-      "Month",
-      "Equipment",
-      "Type",
-      "Lease Amount",
-      "Black Click Charges",
-      "Color Click Charges",
-      "Toner Costs",
-      "Other Costs",
-      "Total Monthly Cost",
-      "Escalation Applied",
-      "Is Payment Month",
-      "Post Initial Period",
-    ]
+    if (viewMode === "individual") {
+      // Export individual equipment details
+      const headers = [
+        "Month",
+        "Equipment",
+        "Type",
+        "Lease Amount",
+        "Black Click Charges",
+        "Color Click Charges",
+        "Toner Costs",
+        "Other Costs",
+        "Total Monthly Cost",
+        "Escalation Applied",
+        "Is Payment Month",
+        "Post Initial Period",
+      ]
 
-    const csvContent = [
-      headers.join(","),
-      ...analysisData.allDetails.map((detail) =>
-        [
-          detail.month,
-          `"${detail.equipmentName}"`,
-          detail.equipmentType,
-          detail.leaseAmount.toFixed(2),
-          detail.blackClickCharges.toFixed(2),
-          detail.colorClickCharges.toFixed(2),
-          detail.tonerCosts.toFixed(2),
-          detail.otherCosts.toFixed(2),
-          detail.totalMonthlyCost.toFixed(2),
-          detail.escalationApplied,
-          detail.isPaymentMonth,
-          detail.isPostInitialPeriod,
-        ].join(","),
-      ),
-    ].join("\n")
+      const csvContent = [
+        headers.join(","),
+        ...analysisData.allDetails.map((detail) =>
+          [
+            detail.month,
+            `"${detail.equipmentName}"`,
+            detail.equipmentType,
+            detail.leaseAmount.toFixed(2),
+            detail.blackClickCharges.toFixed(2),
+            detail.colorClickCharges.toFixed(2),
+            detail.tonerCosts.toFixed(2),
+            detail.otherCosts.toFixed(2),
+            detail.totalMonthlyCost.toFixed(2),
+            detail.escalationApplied,
+            detail.isPaymentMonth,
+            detail.isPostInitialPeriod,
+          ].join(","),
+        ),
+      ].join("\n")
 
-    const blob = new Blob([csvContent], { type: "text/csv" })
-    const url = window.URL.createObjectURL(blob)
-    const a = document.createElement("a")
-    a.href = url
-    a.download = `cash-flow-analysis-${clientDetails.companyName.replace(/\s+/g, "-")}.csv`
-    a.click()
-    window.URL.revokeObjectURL(url)
+      const blob = new Blob([csvContent], { type: "text/csv" })
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement("a")
+      a.href = url
+      a.download = `individual-equipment-analysis-${clientDetails.companyName.replace(/\s+/g, "-")}.csv`
+      a.click()
+      window.URL.revokeObjectURL(url)
+    } else {
+      // Export equipment totals - separate files for current and proposed
+
+      // Current Equipment CSV
+      if (currentEquipment.length > 0) {
+        const currentHeaders = ["Month", ...currentEquipment.map((eq) => `${eq.brand} ${eq.model}`), "Total"]
+        const currentCsvContent = [
+          currentHeaders.join(","),
+          ...currentEquipmentTotalsData.map((row) => {
+            const values = [row.month]
+            currentEquipment.forEach((eq) => {
+              const equipmentName = `${eq.brand} ${eq.model}`
+              values.push((row[equipmentName] || 0).toFixed(2))
+            })
+            values.push((row["Total"] || 0).toFixed(2))
+            return values.join(",")
+          }),
+        ].join("\n")
+
+        const currentBlob = new Blob([currentCsvContent], { type: "text/csv" })
+        const currentUrl = window.URL.createObjectURL(currentBlob)
+        const currentA = document.createElement("a")
+        currentA.href = currentUrl
+        currentA.download = `current-equipment-totals-${clientDetails.companyName.replace(/\s+/g, "-")}.csv`
+        currentA.click()
+        window.URL.revokeObjectURL(currentUrl)
+      }
+
+      // Proposed Equipment CSV
+      if (proposedEquipment.length > 0) {
+        const proposedHeaders = ["Month", ...proposedEquipment.map((eq) => `${eq.brand} ${eq.model}`), "Total"]
+        const proposedCsvContent = [
+          proposedHeaders.join(","),
+          ...proposedEquipmentTotalsData.map((row) => {
+            const values = [row.month]
+            proposedEquipment.forEach((eq) => {
+              const equipmentName = `${eq.brand} ${eq.model}`
+              values.push((row[equipmentName] || 0).toFixed(2))
+            })
+            values.push((row["Total"] || 0).toFixed(2))
+            return values.join(",")
+          }),
+        ].join("\n")
+
+        const proposedBlob = new Blob([proposedCsvContent], { type: "text/csv" })
+        const proposedUrl = window.URL.createObjectURL(proposedBlob)
+        const proposedA = document.createElement("a")
+        proposedA.href = proposedUrl
+        proposedA.download = `proposed-equipment-totals-${clientDetails.companyName.replace(/\s+/g, "-")}.csv`
+        proposedA.click()
+        window.URL.revokeObjectURL(proposedUrl)
+      }
+    }
   }
 
   const formatPaybackPeriod = (months: number | null): string => {
@@ -185,8 +313,30 @@ export function AnalysisResults({ clientDetails, currentEquipment, proposedEquip
     return remainingMonths > 0 ? `${years} years, ${remainingMonths} months` : `${years} years`
   }
 
+  const getEquipmentIcon = (equipment: Equipment) => {
+    return equipment.type === "color" ? (
+      <Monitor className="w-4 h-4 text-blue-600" />
+    ) : (
+      <Printer className="w-4 h-4 text-gray-600" />
+    )
+  }
+
+  const getEquipmentCashFlowData = (equipment: Equipment, type: "current" | "proposed") => {
+    const totalMonths = analysisYears * 12
+    return calculateEquipmentCashFlow(equipment, totalMonths, type)
+  }
+
   return (
     <div className="space-y-6">
+      {/* Navigation */}
+      {onNavigateBack && (
+        <div className="flex justify-start">
+          <Button variant="outline" onClick={onNavigateBack}>
+            ← Back to Equipment Setup
+          </Button>
+        </div>
+      )}
+
       {/* Analysis Settings */}
       <Card>
         <CardHeader>
@@ -267,6 +417,9 @@ export function AnalysisResults({ clientDetails, currentEquipment, proposedEquip
               <h3 className="font-medium text-gray-900">Equipment Count</h3>
               <p className="text-sm text-gray-600">Current Equipment: {currentEquipment.length}</p>
               <p className="text-sm text-gray-600">Proposed Equipment: {proposedEquipment.length}</p>
+              <p className="text-sm text-gray-600">
+                Analysis Period: {analysisYears} years ({analysisYears * 12} months)
+              </p>
             </div>
           </div>
         </CardContent>
@@ -318,6 +471,385 @@ export function AnalysisResults({ clientDetails, currentEquipment, proposedEquip
           </CardContent>
         </Card>
       </div>
+
+      {/* Equipment Details with View Options */}
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <CardTitle>Equipment Cash Flow Details</CardTitle>
+          <div className="flex items-center gap-4">
+            <Select value={viewMode} onValueChange={(value: "individual" | "totals") => setViewMode(value)}>
+              <SelectTrigger className="w-[200px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="individual">Individual Equipment</SelectItem>
+                <SelectItem value="totals">Equipment Totals</SelectItem>
+              </SelectContent>
+            </Select>
+            <Button onClick={exportToCSV} variant="outline" size="sm">
+              <Download className="w-4 h-4 mr-2" />
+              Export CSV
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {viewMode === "individual" ? (
+            <div className="space-y-4">
+              {/* Current Equipment Section */}
+              <div className="space-y-2">
+                <h3 className="text-lg font-semibold text-red-700 border-b border-red-200 pb-2">
+                  Current Equipment ({currentEquipment.length})
+                </h3>
+                {currentEquipment.map((equipment) => {
+                  const isOpen = openEquipment.includes(equipment.id)
+                  const cashFlowData = getEquipmentCashFlowData(equipment, "current")
+
+                  return (
+                    <Collapsible key={equipment.id} open={isOpen} onOpenChange={() => toggleEquipment(equipment.id)}>
+                      <CollapsibleTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          className="w-full justify-between p-4 h-auto hover:bg-red-50 border border-red-100 rounded-lg"
+                        >
+                          <div className="flex items-center gap-3">
+                            {getEquipmentIcon(equipment)}
+                            <div className="text-left">
+                              <div className="font-medium text-gray-900">
+                                {equipment.brand} {equipment.model}
+                              </div>
+                              <div className="text-sm text-gray-600">
+                                {equipment.location} • {equipment.type === "color" ? "Color & Black" : "Black Only"} •{" "}
+                                {equipment.ownership}
+                              </div>
+                            </div>
+                          </div>
+                          {isOpen ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+                        </Button>
+                      </CollapsibleTrigger>
+                      <CollapsibleContent className="mt-2">
+                        <div className="border border-red-100 rounded-lg p-4 bg-red-50/30">
+                          <div className="overflow-x-auto">
+                            <Table>
+                              <TableHeader>
+                                <TableRow>
+                                  <TableHead>Month</TableHead>
+                                  <TableHead className="text-right">Lease Amount</TableHead>
+                                  <TableHead className="text-right">Black Clicks</TableHead>
+                                  <TableHead className="text-right">Color Clicks</TableHead>
+                                  <TableHead className="text-right">Toner/Ink</TableHead>
+                                  <TableHead className="text-right">Other/Savings</TableHead>
+                                  <TableHead className="text-right">Total</TableHead>
+                                  <TableHead className="text-center">Escalation</TableHead>
+                                </TableRow>
+                              </TableHeader>
+                              <TableBody>
+                                {cashFlowData.monthlyBreakdowns.map((detail) => (
+                                  <TableRow
+                                    key={detail.month}
+                                    className={detail.escalationApplied ? "bg-yellow-50" : ""}
+                                  >
+                                    <TableCell className="font-medium">{detail.month}</TableCell>
+                                    <TableCell className="text-right">
+                                      $
+                                      {detail.leaseAmount.toLocaleString("en-US", {
+                                        minimumFractionDigits: 2,
+                                        maximumFractionDigits: 2,
+                                      })}
+                                    </TableCell>
+                                    <TableCell className="text-right">
+                                      $
+                                      {detail.blackClickCharges.toLocaleString("en-US", {
+                                        minimumFractionDigits: 2,
+                                        maximumFractionDigits: 2,
+                                      })}
+                                    </TableCell>
+                                    <TableCell className="text-right">
+                                      $
+                                      {detail.colorClickCharges.toLocaleString("en-US", {
+                                        minimumFractionDigits: 2,
+                                        maximumFractionDigits: 2,
+                                      })}
+                                    </TableCell>
+                                    <TableCell className="text-right">
+                                      $
+                                      {detail.tonerCosts.toLocaleString("en-US", {
+                                        minimumFractionDigits: 2,
+                                        maximumFractionDigits: 2,
+                                      })}
+                                    </TableCell>
+                                    <TableCell className="text-right">
+                                      $
+                                      {detail.otherCosts.toLocaleString("en-US", {
+                                        minimumFractionDigits: 2,
+                                        maximumFractionDigits: 2,
+                                      })}
+                                    </TableCell>
+                                    <TableCell className="text-right font-medium">
+                                      $
+                                      {detail.totalMonthlyCost.toLocaleString("en-US", {
+                                        minimumFractionDigits: 2,
+                                        maximumFractionDigits: 2,
+                                      })}
+                                    </TableCell>
+                                    <TableCell className="text-center">
+                                      {detail.escalationApplied ? (
+                                        <span className="text-orange-600 font-medium">✓</span>
+                                      ) : (
+                                        <span className="text-gray-400">-</span>
+                                      )}
+                                    </TableCell>
+                                  </TableRow>
+                                ))}
+                              </TableBody>
+                            </Table>
+                          </div>
+                        </div>
+                      </CollapsibleContent>
+                    </Collapsible>
+                  )
+                })}
+              </div>
+
+              {/* Proposed Equipment Section */}
+              <div className="space-y-2">
+                <h3 className="text-lg font-semibold text-blue-700 border-b border-blue-200 pb-2">
+                  Proposed Equipment ({proposedEquipment.length})
+                </h3>
+                {proposedEquipment.map((equipment) => {
+                  const isOpen = openEquipment.includes(equipment.id)
+                  const cashFlowData = getEquipmentCashFlowData(equipment, "proposed")
+
+                  return (
+                    <Collapsible key={equipment.id} open={isOpen} onOpenChange={() => toggleEquipment(equipment.id)}>
+                      <CollapsibleTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          className="w-full justify-between p-4 h-auto hover:bg-blue-50 border border-blue-100 rounded-lg"
+                        >
+                          <div className="flex items-center gap-3">
+                            {getEquipmentIcon(equipment)}
+                            <div className="text-left">
+                              <div className="font-medium text-gray-900">
+                                {equipment.brand} {equipment.model}
+                              </div>
+                              <div className="text-sm text-gray-600">
+                                {equipment.location} • {equipment.type === "color" ? "Color & Black" : "Black Only"} •{" "}
+                                {equipment.ownership}
+                              </div>
+                            </div>
+                          </div>
+                          {isOpen ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+                        </Button>
+                      </CollapsibleTrigger>
+                      <CollapsibleContent className="mt-2">
+                        <div className="border border-blue-100 rounded-lg p-4 bg-blue-50/30">
+                          <div className="overflow-x-auto">
+                            <Table>
+                              <TableHeader>
+                                <TableRow>
+                                  <TableHead>Month</TableHead>
+                                  <TableHead className="text-right">Lease Amount</TableHead>
+                                  <TableHead className="text-right">Black Clicks</TableHead>
+                                  <TableHead className="text-right">Color Clicks</TableHead>
+                                  <TableHead className="text-right">Toner/Ink</TableHead>
+                                  <TableHead className="text-right">Other/Savings</TableHead>
+                                  <TableHead className="text-right">Total</TableHead>
+                                  <TableHead className="text-center">Escalation</TableHead>
+                                </TableRow>
+                              </TableHeader>
+                              <TableBody>
+                                {cashFlowData.monthlyBreakdowns.map((detail) => (
+                                  <TableRow
+                                    key={detail.month}
+                                    className={detail.escalationApplied ? "bg-yellow-50" : ""}
+                                  >
+                                    <TableCell className="font-medium">{detail.month}</TableCell>
+                                    <TableCell className="text-right">
+                                      $
+                                      {detail.leaseAmount.toLocaleString("en-US", {
+                                        minimumFractionDigits: 2,
+                                        maximumFractionDigits: 2,
+                                      })}
+                                    </TableCell>
+                                    <TableCell className="text-right">
+                                      $
+                                      {detail.blackClickCharges.toLocaleString("en-US", {
+                                        minimumFractionDigits: 2,
+                                        maximumFractionDigits: 2,
+                                      })}
+                                    </TableCell>
+                                    <TableCell className="text-right">
+                                      $
+                                      {detail.colorClickCharges.toLocaleString("en-US", {
+                                        minimumFractionDigits: 2,
+                                        maximumFractionDigits: 2,
+                                      })}
+                                    </TableCell>
+                                    <TableCell className="text-right">
+                                      $
+                                      {detail.tonerCosts.toLocaleString("en-US", {
+                                        minimumFractionDigits: 2,
+                                        maximumFractionDigits: 2,
+                                      })}
+                                    </TableCell>
+                                    <TableCell className="text-right">
+                                      $
+                                      {detail.otherCosts.toLocaleString("en-US", {
+                                        minimumFractionDigits: 2,
+                                        maximumFractionDigits: 2,
+                                      })}
+                                    </TableCell>
+                                    <TableCell className="text-right font-medium">
+                                      $
+                                      {detail.totalMonthlyCost.toLocaleString("en-US", {
+                                        minimumFractionDigits: 2,
+                                        maximumFractionDigits: 2,
+                                      })}
+                                    </TableCell>
+                                    <TableCell className="text-center">
+                                      {detail.escalationApplied ? (
+                                        <span className="text-orange-600 font-medium">✓</span>
+                                      ) : (
+                                        <span className="text-gray-400">-</span>
+                                      )}
+                                    </TableCell>
+                                  </TableRow>
+                                ))}
+                              </TableBody>
+                            </Table>
+                          </div>
+                        </div>
+                      </CollapsibleContent>
+                    </Collapsible>
+                  )
+                })}
+              </div>
+            </div>
+          ) : (
+            /* Equipment Totals Tables - Separate for Current and Proposed */
+            <div className="space-y-8">
+              {/* Current Equipment Totals */}
+              {currentEquipment.length > 0 && (
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold text-red-700 border-b border-red-200 pb-2">
+                    Current Equipment Monthly Totals ({currentEquipment.length} equipment)
+                  </h3>
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="sticky left-0 bg-white">Month</TableHead>
+                          {currentEquipment.map((equipment) => (
+                            <TableHead key={equipment.id} className="text-right min-w-[150px]">
+                              <div className="flex flex-col">
+                                <span className="font-medium">
+                                  {equipment.brand} {equipment.model}
+                                </span>
+                                <span className="text-xs text-gray-500 font-normal">{equipment.location}</span>
+                              </div>
+                            </TableHead>
+                          ))}
+                          <TableHead className="text-right min-w-[120px] bg-red-100 font-bold">Total</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {currentEquipmentTotalsData.map((row) => (
+                          <TableRow key={row.month}>
+                            <TableCell className="sticky left-0 bg-white font-medium">{row.month}</TableCell>
+                            {currentEquipment.map((equipment) => {
+                              const equipmentName = `${equipment.brand} ${equipment.model}`
+                              const value = row[equipmentName] || 0
+
+                              return (
+                                <TableCell key={equipment.id} className="text-right bg-red-50/50">
+                                  $
+                                  {value.toLocaleString("en-US", {
+                                    minimumFractionDigits: 2,
+                                    maximumFractionDigits: 2,
+                                  })}
+                                </TableCell>
+                              )
+                            })}
+                            <TableCell className="text-right bg-red-100 font-bold">
+                              $
+                              {(row["Total"] || 0).toLocaleString("en-US", {
+                                minimumFractionDigits: 2,
+                                maximumFractionDigits: 2,
+                              })}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </div>
+              )}
+
+              {/* Proposed Equipment Totals */}
+              {proposedEquipment.length > 0 && (
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold text-blue-700 border-b border-blue-200 pb-2">
+                    Proposed Equipment Monthly Totals ({proposedEquipment.length} equipment)
+                  </h3>
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="sticky left-0 bg-white">Month</TableHead>
+                          {proposedEquipment.map((equipment) => (
+                            <TableHead key={equipment.id} className="text-right min-w-[150px]">
+                              <div className="flex flex-col">
+                                <span className="font-medium">
+                                  {equipment.brand} {equipment.model}
+                                </span>
+                                <span className="text-xs text-gray-500 font-normal">{equipment.location}</span>
+                              </div>
+                            </TableHead>
+                          ))}
+                          <TableHead className="text-right min-w-[120px] bg-blue-100 font-bold">Total</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {proposedEquipmentTotalsData.map((row) => (
+                          <TableRow key={row.month}>
+                            <TableCell className="sticky left-0 bg-white font-medium">{row.month}</TableCell>
+                            {proposedEquipment.map((equipment) => {
+                              const equipmentName = `${equipment.brand} ${equipment.model}`
+                              const value = row[equipmentName] || 0
+
+                              return (
+                                <TableCell key={equipment.id} className="text-right bg-blue-50/50">
+                                  $
+                                  {value.toLocaleString("en-US", {
+                                    minimumFractionDigits: 2,
+                                    maximumFractionDigits: 2,
+                                  })}
+                                </TableCell>
+                              )
+                            })}
+                            <TableCell className="text-right bg-blue-100 font-bold">
+                              $
+                              {(row["Total"] || 0).toLocaleString("en-US", {
+                                minimumFractionDigits: 2,
+                                maximumFractionDigits: 2,
+                              })}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </div>
+              )}
+
+              <p className="text-sm text-gray-600 text-center">
+                Showing complete {analysisYears * 12}-month analysis. Use Export CSV to save separate files for current
+                and proposed equipment.
+              </p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Charts */}
       <Card>
@@ -399,112 +931,6 @@ export function AnalysisResults({ clientDetails, currentEquipment, proposedEquip
               </BarChart>
             </ResponsiveContainer>
           </div>
-        </CardContent>
-      </Card>
-
-      {/* Comprehensive Monthly Cash Flow Report */}
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle>Comprehensive Monthly Cash Flow Report</CardTitle>
-          <Button onClick={exportToCSV} variant="outline" size="sm">
-            <Download className="w-4 h-4 mr-2" />
-            Export CSV
-          </Button>
-        </CardHeader>
-        <CardContent className="overflow-x-auto">
-          <Table>
-            <TableCaption>
-              Detailed monthly cash flow breakdown for all equipment over {analysisYears * 12} months. Shows
-              escalations, payment timing, and post-initial period adjustments.
-            </TableCaption>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="text-left">Month</TableHead>
-                <TableHead className="text-left">Equipment</TableHead>
-                <TableHead className="text-left">Type</TableHead>
-                <TableHead className="text-right">Lease Amount</TableHead>
-                <TableHead className="text-right">Black Clicks</TableHead>
-                <TableHead className="text-right">Color Clicks</TableHead>
-                <TableHead className="text-right">Toner/Ink</TableHead>
-                <TableHead className="text-right">Other/Savings</TableHead>
-                <TableHead className="text-right">Total</TableHead>
-                <TableHead className="text-center">Escalation</TableHead>
-                <TableHead className="text-center">Payment</TableHead>
-                <TableHead className="text-center">Post-Initial</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {analysisData.allDetails.map((detail, index) => (
-                <TableRow key={index} className={detail.escalationApplied ? "bg-yellow-50" : ""}>
-                  <TableCell className="font-medium">{detail.month}</TableCell>
-                  <TableCell className="max-w-[200px] truncate" title={detail.equipmentName}>
-                    {detail.equipmentName}
-                  </TableCell>
-                  <TableCell>
-                    <span
-                      className={`px-2 py-1 rounded text-xs ${
-                        detail.equipmentType === "current" ? "bg-red-100 text-red-800" : "bg-blue-100 text-blue-800"
-                      }`}
-                    >
-                      {detail.equipmentType}
-                    </span>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    $
-                    {detail.leaseAmount.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    $
-                    {detail.blackClickCharges.toLocaleString("en-US", {
-                      minimumFractionDigits: 2,
-                      maximumFractionDigits: 2,
-                    })}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    $
-                    {detail.colorClickCharges.toLocaleString("en-US", {
-                      minimumFractionDigits: 2,
-                      maximumFractionDigits: 2,
-                    })}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    ${detail.tonerCosts.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    ${detail.otherCosts.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                  </TableCell>
-                  <TableCell className="text-right font-medium">
-                    $
-                    {detail.totalMonthlyCost.toLocaleString("en-US", {
-                      minimumFractionDigits: 2,
-                      maximumFractionDigits: 2,
-                    })}
-                  </TableCell>
-                  <TableCell className="text-center">
-                    {detail.escalationApplied ? (
-                      <span className="text-orange-600 font-medium">✓</span>
-                    ) : (
-                      <span className="text-gray-400">-</span>
-                    )}
-                  </TableCell>
-                  <TableCell className="text-center">
-                    {detail.isPaymentMonth ? (
-                      <span className="text-green-600 font-medium">✓</span>
-                    ) : (
-                      <span className="text-gray-400">-</span>
-                    )}
-                  </TableCell>
-                  <TableCell className="text-center">
-                    {detail.isPostInitialPeriod ? (
-                      <span className="text-purple-600 font-medium">✓</span>
-                    ) : (
-                      <span className="text-gray-400">-</span>
-                    )}
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
         </CardContent>
       </Card>
 

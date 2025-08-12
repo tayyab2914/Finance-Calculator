@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { ClientDetailsForm } from "@/components/client-details-form"
@@ -47,10 +47,13 @@ export interface Equipment {
     }
   }
   tonerCosts?: {
+    blackMonthlyVolume: number
+    colorMonthlyVolume?: number
     blackCostPerCartridge: number
     colorCostPerCartridge?: number
-    numberOfCartridges: number
-    yieldPerUnit: number
+    numberOfColorCartridges?: number
+    blackYieldPerUnit: number
+    colorYieldPerUnit?: number
     escalationPercent: number
   }
   otherCosts?: Array<{
@@ -59,14 +62,14 @@ export interface Equipment {
     escalationPercent: number
   }>
   // Proposed equipment specific fields
-  cashPrice?: number
-  settlement?: number
+  cashPrice?: number | string
+  settlement?: number | string
   sellingPrice?: number
-  rentalFactor?: number
+  rentalFactor?: number | string
   advanceOrArrears?: "advance" | "arrears"
   fmvLease?: boolean
   leasePeriod?: number
-  savingsPerMonth?: number
+  savingsPerMonth?: number | string
 }
 
 export default function UpgradeAnalysisPage() {
@@ -289,6 +292,7 @@ export default function UpgradeAnalysisPage() {
               clientDetails={clientDetails}
               currentEquipment={currentEquipment}
               proposedEquipment={proposedEquipment}
+              onNavigateBack={() => setStep(3)}
             />
             <div className="flex justify-between">
               <Button variant="outline" onClick={() => setStep(3)}>

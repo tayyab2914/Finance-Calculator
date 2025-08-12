@@ -87,17 +87,14 @@ export function calculateLeasePayment(
     const monthsUntilFirstEscalation = monthsRemaining % 12 === 0 ? 12 : monthsRemaining % 12
 
     if (month >= monthsUntilFirstEscalation) {
-      escalationCount = 1 + Math.floor((month - 1 -monthsUntilFirstEscalation) / 12)
+      escalationCount = 1 + Math.floor((month - 1 - monthsUntilFirstEscalation) / 12)
       escalationApplied = (month - 1 - monthsUntilFirstEscalation) % 12 === 0
     }
-
-    
 
     // Check if we're in post-initial period
     if (month > monthsRemaining) {
       isPostInitial = true
       // Continue with the last escalated rate
-      // escalationCount = Math.floor((monthsRemaining - monthsUntilFirstEscalation - 1) / 12) + 1
       if (monthsRemaining > monthsUntilFirstEscalation) {
         escalationCount = Math.max(1, escalationCount)
       }
@@ -105,10 +102,7 @@ export function calculateLeasePayment(
   } else {
     // For proposed equipment: Escalations occur every 12 months from start
     escalationCount = Math.floor((month - 1) / 12)
-    escalationApplied = (month - 1) % 12 === 0 && month !== 1;
-    // if (escalationCount > 0) {
-    //   escalationApplied = true
-    // }
+    escalationApplied = (month - 1) % 12 === 0 && month !== 1
   }
 
   // Apply escalations
@@ -118,11 +112,6 @@ export function calculateLeasePayment(
   if (isPostInitial && evergreenRental && reducedRate) {
     escalatedAmount = (escalatedAmount * reducedRate) / 100
   }
-
-  // For quarterly payments, multiply by 3
-  // if (paymentFrequency === "quarterly") {
-  //   escalatedAmount *= 3
-  // }
 
   return {
     amount: escalatedAmount,
@@ -148,9 +137,8 @@ export function calculateClickCharges(
 
   const monthsRemaining = equipment.leaseDetails?.monthsRemaining ?? 0
   const monthsUntilFirstEscalation = monthsRemaining % 12 === 0 ? 12 : monthsRemaining % 12
-  
 
-  const yearsPassed = 1 + Math.floor((month - 1 -monthsUntilFirstEscalation) / 12)
+  const yearsPassed = 1 + Math.floor((month - 1 - monthsUntilFirstEscalation) / 12)
   let blackClickCharges = 0
   let colorClickCharges = 0
 
@@ -186,7 +174,7 @@ export function calculateClickCharges(
 }
 
 /**
- * Calculate toner costs for a specific month
+ * Calculate toner costs for a specific month with separate black and color volumes and yields
  */
 export function calculateTonerCosts(equipment: Equipment, month: number): number {
   if (equipment.copyBasedService || !equipment.tonerCosts) {
@@ -194,35 +182,71 @@ export function calculateTonerCosts(equipment: Equipment, month: number): number
   }
 
   const yearsPassed = Math.floor((month - 1) / 12)
-  const { blackCostPerCartridge, colorCostPerCartridge, numberOfCartridges, yieldPerUnit, escalationPercent } =
-    equipment.tonerCosts
+  const {
+    blackMonthlyVolume,
+    colorMonthlyVolume,
+    blackCostPerCartridge,
+    colorCostPerCartridge,
+    numberOfColorCartridges,
+    blackYieldPerUnit,
+    colorYieldPerUnit,
+    escalationPercent,
+  } = equipment.tonerCosts
 
   let monthlyTonerCost = 0
 
-  // If we have click data, use it to estimate toner consumption
-  if (equipment.clickCharges) {
-    const totalMonthlyVolume =
-      (equipment.clickCharges.black?.monthlyVolume || 0) + (equipment.clickCharges.color?.monthlyVolume || 0)
+  // Apply monthly growth to volumes (nominal growth in cost)
+  const monthlyGrowthRate = calculateMonthlyGrowthRate(escalationPercent || 0)
 
-    if (totalMonthlyVolume > 0 && yieldPerUnit > 0) {
-      const cartridgesNeeded = (totalMonthlyVolume * numberOfCartridges) / yieldPerUnit
-      const escalatedBlackCost = calculateEscalationFactor(blackCostPerCartridge, escalationPercent, yearsPassed)
-      monthlyTonerCost += cartridgesNeeded * escalatedBlackCost
+  // Calculate black toner costs (always 1 black cartridge assumed)
+  if (blackMonthlyVolume && blackCostPerCartridge && blackYieldPerUnit && blackYieldPerUnit > 0) {
+    // Apply monthly growth to volume
+    const adjustedBlackVolume = blackMonthlyVolume * Math.pow(1 + monthlyGrowthRate, month - 1)
 
-      if (equipment.type === "color" && colorCostPerCartridge) {
-        const escalatedColorCost = calculateEscalationFactor(colorCostPerCartridge, escalationPercent, yearsPassed)
-        monthlyTonerCost += cartridgesNeeded * escalatedColorCost
-      }
+    // Calculate cartridges needed based on volume and yield (1 black cartridge)
+    const blackCartridgesNeeded = adjustedBlackVolume / blackYieldPerUnit
+
+    // Apply annual escalation to cartridge cost
+    const escalatedBlackCost = calculateEscalationFactor(blackCostPerCartridge, escalationPercent || 0, 0)
+
+    monthlyTonerCost += blackCartridgesNeeded * escalatedBlackCost
+  }
+
+  // Calculate color toner costs
+  if (
+    equipment.type === "color" &&
+    colorMonthlyVolume &&
+    numberOfColorCartridges &&
+    colorCostPerCartridge &&
+    colorYieldPerUnit &&
+    colorYieldPerUnit > 0
+  ) {
+    // Apply monthly growth to volume
+    const adjustedColorVolume = colorMonthlyVolume * Math.pow(1 + monthlyGrowthRate, month - 1)
+
+    // Calculate cartridges needed based on volume and yield
+    const colorCartridgesNeeded = (adjustedColorVolume * numberOfColorCartridges) / colorYieldPerUnit
+
+    // Apply annual escalation to cartridge cost
+    const escalatedColorCost = calculateEscalationFactor(colorCostPerCartridge, escalationPercent || 0, 0)
+
+    monthlyTonerCost += colorCartridgesNeeded * escalatedColorCost
+  }
+
+  // Fallback calculation if volumes are not provided but cartridge data exists
+  if (monthlyTonerCost === 0) {
+    // Black cartridge fallback (assume 1 black cartridge)
+    if (blackCostPerCartridge) {
+      const estimatedBlackConsumption = 1 / 12 // Assume 1 cartridge lasts 1 year on average
+      const escalatedBlackCost = calculateEscalationFactor(blackCostPerCartridge, escalationPercent || 0, 0)
+      monthlyTonerCost += estimatedBlackConsumption * escalatedBlackCost
     }
-  } else {
-    // Fallback: Estimate based on average monthly consumption
-    const estimatedMonthlyConsumption = numberOfCartridges / 12 // Assume cartridges last 1 year on average
-    const escalatedBlackCost = calculateEscalationFactor(blackCostPerCartridge, escalationPercent, yearsPassed)
-    monthlyTonerCost += estimatedMonthlyConsumption * escalatedBlackCost
 
-    if (equipment.type === "color" && colorCostPerCartridge) {
-      const escalatedColorCost = calculateEscalationFactor(colorCostPerCartridge, escalationPercent, yearsPassed)
-      monthlyTonerCost += estimatedMonthlyConsumption * escalatedColorCost
+    // Color cartridge fallback
+    if (equipment.type === "color" && numberOfColorCartridges && colorCostPerCartridge) {
+      const estimatedColorConsumption = numberOfColorCartridges / 12
+      const escalatedColorCost = calculateEscalationFactor(colorCostPerCartridge, escalationPercent || 0, 0)
+      monthlyTonerCost += estimatedColorConsumption * escalatedColorCost
     }
   }
 
@@ -248,9 +272,8 @@ export function calculateEquipmentCashFlow(
   const monthlyBreakdowns: MonthlyBreakdown[] = []
 
   for (let month = 1; month <= totalMonths; month++) {
-
     if (equipment.leaseDetails?.paymentFrequency === "quarterly" && (month - 1) % 3 !== 0) {
-      continue; // skip non-quarterly months
+      continue // skip non-quarterly months
     }
     // Calculate lease payment
     const leaseResult = calculateLeasePayment(equipment, month, equipmentType)
@@ -315,7 +338,7 @@ export function calculatePaybackPeriod(savingsFlows: number[]): number | null {
 }
 
 /**
- * Calculate volume totals for comparison
+ * Calculate volume totals for comparison (click charges)
  */
 export function calculateVolumeTotals(equipment: Equipment[]): { black: number; color: number } {
   const totals = { black: 0, color: 0 }
@@ -325,6 +348,24 @@ export function calculateVolumeTotals(equipment: Equipment[]): { black: number; 
       totals.black += eq.clickCharges.black?.monthlyVolume || 0
       if (eq.type === "color" && eq.clickCharges.color) {
         totals.color += eq.clickCharges.color.monthlyVolume || 0
+      }
+    }
+  })
+
+  return totals
+}
+
+/**
+ * Calculate toner volume totals for comparison
+ */
+export function calculateTonerVolumeTotals(equipment: Equipment[]): { black: number; color: number } {
+  const totals = { black: 0, color: 0 }
+
+  equipment.forEach((eq) => {
+    if (!eq.copyBasedService && eq.tonerCosts) {
+      totals.black += eq.tonerCosts.blackMonthlyVolume || 0
+      if (eq.type === "color") {
+        totals.color += eq.tonerCosts.colorMonthlyVolume || 0
       }
     }
   })
