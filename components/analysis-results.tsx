@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo, useState } from "react"
+import { useMemo, useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import type { ClientDetails, Equipment } from "@/app/upgrade-analysis/page"
 import {
@@ -20,8 +20,11 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Button } from "@/components/ui/button"
-import { Download, ChevronDown, ChevronRight, Monitor, Printer } from "lucide-react"
+import { Download, ChevronDown, ChevronRight, Monitor, Printer, Save, Loader2 } from "lucide-react"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import { saveAnalysis, updateAnalysis } from "@/lib/database"
+import { useAuth } from "@/contexts/auth-context"
 import {
   aggregateEquipmentCashFlows,
   calculateNPV,
@@ -36,6 +39,10 @@ interface AnalysisResultsProps {
   currentEquipment: Equipment[]
   proposedEquipment: Equipment[]
   onNavigateBack?: () => void
+  initialAnalysisYears?: number
+  initialDiscountRate?: number
+  readOnly?: boolean
+  analysisId?: string
 }
 
 interface CashFlowData {
@@ -69,12 +76,33 @@ export function AnalysisResults({
   currentEquipment,
   proposedEquipment,
   onNavigateBack,
+  initialAnalysisYears = 5,
+  initialDiscountRate = 8,
+  readOnly = false,
+  analysisId,
 }: AnalysisResultsProps) {
-  const [analysisYears, setAnalysisYears] = useState<number>(5)
-  const [discountRateAnnual, setDiscountRateAnnual] = useState<number>(8)
+  const { user } = useAuth()
+  const [analysisYears, setAnalysisYears] = useState<number>(initialAnalysisYears)
+  const [discountRateAnnual, setDiscountRateAnnual] = useState<number>(initialDiscountRate)
   const [customDiscountRate, setCustomDiscountRate] = useState<string>("")
   const [openEquipment, setOpenEquipment] = useState<string[]>([])
   const [viewMode, setViewMode] = useState<"individual" | "totals">("individual")
+  const [saving, setSaving] = useState(false)
+  const [saveError, setSaveError] = useState<string | null>(null)
+  const [saveSuccess, setSaveSuccess] = useState<string | null>(null)
+  const [analysisTitle, setAnalysisTitle] = useState<string>("")
+
+  // Set default title based on client details
+  useEffect(() => {
+    if (!analysisTitle && clientDetails.companyName) {
+      const timestamp = new Date().toLocaleDateString("en-US", {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+      })
+      setAnalysisTitle(`${clientDetails.companyName} Analysis - ${timestamp}`)
+    }
+  }, [clientDetails.companyName, analysisTitle])
 
   const analysisData = useMemo((): AnalysisData => {
     const monthlyDiscountRate = discountRateAnnual / 100 / 12
@@ -185,21 +213,57 @@ export function AnalysisResults({
 
   const handleDiscountRateChange = (value: string) => {
     if (value === "custom") {
-      // When custom is selected, keep the current discount rate but show the input
-      setCustomDiscountRate(discountRateAnnual.toString());
-      return;
+      setCustomDiscountRate(discountRateAnnual.toString())
+      return
     }
-    setDiscountRateAnnual(Number.parseFloat(value));
-    setCustomDiscountRate(""); // Clear custom value when a preset is selected
-  };
+    setDiscountRateAnnual(Number.parseFloat(value))
+    setCustomDiscountRate("")
+  }
 
   const handleCustomDiscountRateChange = (value: string) => {
-    setCustomDiscountRate(value);
-    const numValue = Number.parseFloat(value);
+    setCustomDiscountRate(value)
+    const numValue = Number.parseFloat(value)
     if (!isNaN(numValue) && numValue > 0) {
-      setDiscountRateAnnual(numValue);
+      setDiscountRateAnnual(numValue)
     }
-  };
+  }
+
+  const handleSaveAnalysis = async () => {
+    if (!user || !analysisTitle.trim()) {
+      setSaveError("Please enter a title for your analysis")
+      return
+    }
+
+    setSaving(true)
+    setSaveError(null)
+    setSaveSuccess(null)
+
+    try {
+      const analysisSettings = {
+        analysisYears,
+        discountRateAnnual,
+      }
+
+      if (analysisId) {
+        await updateAnalysis(
+          analysisId,
+          analysisTitle.trim(),
+          clientDetails,
+          currentEquipment,
+          proposedEquipment,
+          analysisSettings,
+        )
+        setSaveSuccess("Analysis updated successfully!")
+      } else {
+        await saveAnalysis(analysisTitle.trim(), clientDetails, currentEquipment, proposedEquipment, analysisSettings)
+        setSaveSuccess("Analysis saved successfully!")
+      }
+    } catch (error) {
+      setSaveError(error instanceof Error ? error.message : "Failed to save analysis")
+    } finally {
+      setSaving(false)
+    }
+  }
 
   const toggleEquipment = (equipmentId: string) => {
     setOpenEquipment((prev) =>
@@ -257,42 +321,37 @@ export function AnalysisResults({
 
       // Current Equipment CSV
       if (currentEquipment.length > 0) {
-        const currentHeaders = [
-          "Month",
-          ...currentEquipment.map((eq) => `${eq.brand} ${eq.model}`),
-          "Total"
-        ];
+        const currentHeaders = ["Month", ...currentEquipment.map((eq) => `${eq.brand} ${eq.model}`), "Total"]
 
         const currentCsvContent = [
           currentHeaders.join(","),
           ...currentEquipmentTotalsData.map((row) => {
-            const values: string[] = [];
+            const values: string[] = []
 
             // Ensure month is string
-            values.push(String(row.month));
+            values.push(String(row.month))
 
             // Push equipment values
             currentEquipment.forEach((eq) => {
-              const equipmentName = `${eq.brand} ${eq.model}`;
-              values.push(Number(row[equipmentName] || 0).toFixed(2));
-            });
+              const equipmentName = `${eq.brand} ${eq.model}`
+              values.push(Number(row[equipmentName] || 0).toFixed(2))
+            })
 
             // Push total
-            values.push(Number(row["Total"] || 0).toFixed(2));
+            values.push(Number(row["Total"] || 0).toFixed(2))
 
-            return values.join(",");
+            return values.join(",")
           }),
-        ].join("\n");
+        ].join("\n")
 
-        const currentBlob = new Blob([currentCsvContent], { type: "text/csv" });
-        const currentUrl = window.URL.createObjectURL(currentBlob);
-        const currentA = document.createElement("a");
-        currentA.href = currentUrl;
-        currentA.download = `current-equipment-totals-${clientDetails.companyName.replace(/\s+/g, "-")}.csv`;
-        currentA.click();
-        window.URL.revokeObjectURL(currentUrl);
+        const currentBlob = new Blob([currentCsvContent], { type: "text/csv" })
+        const currentUrl = window.URL.createObjectURL(currentBlob)
+        const currentA = document.createElement("a")
+        currentA.href = currentUrl
+        currentA.download = `current-equipment-totals-${clientDetails.companyName.replace(/\s+/g, "-")}.csv`
+        currentA.click()
+        window.URL.revokeObjectURL(currentUrl)
       }
-
 
       // Proposed Equipment CSV
       if (proposedEquipment.length > 0) {
@@ -353,6 +412,49 @@ export function AnalysisResults({
         </div>
       )}
 
+      {/* Save Analysis Section */}
+      {!readOnly && user && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Save Analysis</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {saveError && (
+                <Alert variant="destructive">
+                  <AlertDescription>{saveError}</AlertDescription>
+                </Alert>
+              )}
+
+              {saveSuccess && (
+                <Alert className="border-green-200 bg-green-50">
+                  <AlertDescription className="text-green-800">{saveSuccess}</AlertDescription>
+                </Alert>
+              )}
+
+              <div className="flex gap-4">
+                <div className="flex-1">
+                  <Label htmlFor="analysisTitle">Analysis Title</Label>
+                  <Input
+                    id="analysisTitle"
+                    value={analysisTitle}
+                    onChange={(e) => setAnalysisTitle(e.target.value)}
+                    placeholder="Enter a title for this analysis"
+                  />
+                </div>
+                <div className="flex items-end">
+                  <Button onClick={handleSaveAnalysis} disabled={saving || !analysisTitle.trim()}>
+                    {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    <Save className="mr-2 h-4 w-4" />
+                    {analysisId ? "Update" : "Save"} Analysis
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Analysis Settings */}
       <Card>
         <CardHeader>
@@ -367,6 +469,7 @@ export function AnalysisResults({
               <Select
                 value={analysisYears.toString()}
                 onValueChange={(value) => setAnalysisYears(Number.parseInt(value))}
+                disabled={readOnly}
               >
                 <SelectTrigger className="w-[200px]">
                   <SelectValue placeholder="Select period" />
@@ -387,6 +490,7 @@ export function AnalysisResults({
                 <Select
                   value={customDiscountRate ? "custom" : discountRateAnnual.toString()}
                   onValueChange={handleDiscountRateChange}
+                  disabled={readOnly}
                 >
                   <SelectTrigger className="w-[150px]">
                     <SelectValue placeholder="Select rate" />
@@ -406,6 +510,7 @@ export function AnalysisResults({
                     value={customDiscountRate}
                     onChange={(e) => handleCustomDiscountRateChange(e.target.value)}
                     className="w-[100px]"
+                    disabled={readOnly}
                   />
                 )}
               </div>
