@@ -231,8 +231,8 @@ export function EquipmentForm({
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="black">Black Printer</SelectItem>
                 <SelectItem value="color">Color and Black Printer</SelectItem>
+                <SelectItem value="black">Black Printer</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -410,7 +410,7 @@ export function EquipmentForm({
           <CardContent className="space-y-6">
             {/* Monthly Volumes */}
             <div className="space-y-4">
-              <h4 className="font-medium text-gray-900">Monthly Volumes</h4>
+              <h4 className="font-medium text-gray-900">Black Volume and Growth</h4>
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-2">
                   <Label>Black Monthly Volume</Label>
@@ -421,24 +421,6 @@ export function EquipmentForm({
                     placeholder="0"
                   />
                 </div>
-                {equipment.type === "color" && (
-                  <div className="space-y-2">
-                    <Label>Color Monthly Volume</Label>
-                    <Input
-                      type="number"
-                      value={getUnifiedVolume("color", "volume")}
-                      onChange={(e) => updateUnifiedVolume("color", "volume", Number.parseInt(e.target.value) || 0)}
-                      placeholder="0"
-                    />
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Volume Growth Rates */}
-            <div className="space-y-4">
-              <h4 className="font-medium text-gray-900">Annual Volume Growth Rates</h4>
-              <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-2">
                   <Label>Black Volume Growth % (Annual)</Label>
                   <Input
@@ -448,19 +430,38 @@ export function EquipmentForm({
                     placeholder="0.00"
                   />
                 </div>
-                {equipment.type === "color" && (
-                  <div className="space-y-2">
-                    <Label>Color Volume Growth % (Annual)</Label>
-                    <Input
-                      type="number"
-                      value={getUnifiedVolume("color", "growth")}
-                      onChange={(e) => updateUnifiedVolume("color", "growth", e.target.value)}
-                      placeholder="0.00"
-                    />
-                  </div>
-                )}
               </div>
             </div>
+
+            {/* Volume Growth Rates */}
+            {equipment.type === "color" && (
+              <div className="space-y-4">
+              <h4 className="font-medium text-gray-900">Color Volume and Growth</h4>
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-2">
+                  <Label>Color Monthly Volume</Label>
+                  <Input
+                    type="number"
+                    value={getUnifiedVolume("color", "volume")}
+                    onChange={(e) => updateUnifiedVolume("color", "volume", Number.parseInt(e.target.value) || 0)}
+                    placeholder="0"
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label>Color Volume Growth % (Annual)</Label>
+                  <Input
+                    type="number"
+                    value={getUnifiedVolume("color", "growth")}
+                    onChange={(e) => updateUnifiedVolume("color", "growth", e.target.value)}
+                    placeholder="0.00"
+                  />
+                </div>
+        
+              </div>
+            </div>
+            )}
+            
 
             {/* Unified Volume Comparison Table for Proposed Equipment */}
             {type === "proposed" && (

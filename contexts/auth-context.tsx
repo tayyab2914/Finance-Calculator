@@ -103,7 +103,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (profileError) {
         console.error("❌ Profile creation error:", profileError)
-        throw profileError
+
+        if (profileError.code === "23503") {
+          throw new Error("A user is already registered with this email.")
+        }
+
+        if (profileError.code != "23505") {
+          throw profileError
+        }
+                
       }
     }
   }

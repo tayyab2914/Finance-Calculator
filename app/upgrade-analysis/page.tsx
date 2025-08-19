@@ -20,7 +20,7 @@ export interface Equipment {
   model: string
   serialNumber?: string
   location: string
-  type: "black" | "color"
+  type: "color" | "black"
   ownership: "lease" | "owned" | "cash"
   copyBasedService: boolean
   termRemaining?: number
@@ -92,7 +92,7 @@ export default function UpgradeAnalysisPage() {
       brand: "",
       model: "",
       location: "",
-      type: "black",
+      type: "color",
       ownership: "lease",
       copyBasedService: true,
       leaseDetails: {
@@ -112,7 +112,7 @@ export default function UpgradeAnalysisPage() {
       brand: "",
       model: "",
       location: "",
-      type: "black",
+      type: "color",
       ownership: "lease",
       copyBasedService: true,
       leaseDetails: {

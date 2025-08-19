@@ -477,7 +477,9 @@ export function AnalysisResults({
                 <SelectContent>
                   <SelectItem value="2">2 Years</SelectItem>
                   <SelectItem value="3">3 Years</SelectItem>
+                  <SelectItem value="4">4 Years</SelectItem>
                   <SelectItem value="5">5 Years</SelectItem>
+                  <SelectItem value="6">6 Years</SelectItem>
                   <SelectItem value="7">7 Years</SelectItem>
                 </SelectContent>
               </Select>
