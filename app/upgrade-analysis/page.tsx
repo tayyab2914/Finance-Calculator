@@ -1,17 +1,23 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { ClientDetailsForm } from "@/components/client-details-form"
 import { EquipmentForm } from "@/components/equipment-form"
 import { AnalysisResults } from "@/components/analysis-results"
 import { Plus } from "lucide-react"
+import { useAuth } from "@/contexts/auth-context"
+import { getUserProfile } from "@/lib/database"
 
 export interface ClientDetails {
   companyName: string
   email: string
   referenceNumber: string
+  contactPersonName?: string
+  contactCompany?: string
+  contactAddress?: string
+  contactNumber?: string
 }
 
 export interface Equipment {
@@ -21,7 +27,7 @@ export interface Equipment {
   serialNumber?: string
   location: string
   type: "color" | "black"
-  ownership: "lease" | "owned" | "cash"
+  ownership: "lease" | "cash"
   copyBasedService: boolean
   termRemaining?: number
   leaseDetails?: {
@@ -77,7 +83,10 @@ export interface Equipment {
 }
 
 export default function UpgradeAnalysisPage() {
+  const { user } = useAuth()
   const [step, setStep] = useState(1)
+  const [defaultDiscountRate, setDefaultDiscountRate] = useState(8)
+  const [currencySymbol, setCurrencySymbol] = useState('$')
   const [clientDetails, setClientDetails] = useState<ClientDetails>({
     companyName: "",
     email: "",
@@ -85,6 +94,22 @@ export default function UpgradeAnalysisPage() {
   })
   const [currentEquipment, setCurrentEquipment] = useState<Equipment[]>([])
   const [proposedEquipment, setProposedEquipment] = useState<Equipment[]>([])
+
+  // Load user's default discount rate
+  useEffect(() => {
+    const loadUserDefaults = async () => {
+      if (user) {
+        try {
+          const profile = await getUserProfile()
+          setDefaultDiscountRate(profile.default_discount_rate || 8)
+          setCurrencySymbol(profile.currency_symbol || '$')
+        } catch (error) {
+          console.error("Failed to load user profile:", error)
+        }
+      }
+    }
+    loadUserDefaults()
+  }, [user])
 
   const addCurrentEquipment = () => {
     const newEquipment: Equipment = {
@@ -297,6 +322,8 @@ export default function UpgradeAnalysisPage() {
               currentEquipment={currentEquipment}
               proposedEquipment={proposedEquipment}
               onNavigateBack={() => setStep(3)}
+              initialDiscountRate={defaultDiscountRate}
+              currencySymbol={currencySymbol}
             />
             <div className="flex justify-between">
               <Button variant="outline" onClick={() => setStep(3)}>

@@ -1,7 +1,7 @@
 "use client"
 
 import type React from "react"
-import { createContext, useContext, useEffect, useState, useRef  } from "react"
+import { createContext, useContext, useEffect, useState, useRef } from "react"
 import type { User, Session } from "@supabase/supabase-js"
 import { supabase } from "@/lib/supabase"
 import { useRouter } from "next/navigation"
@@ -13,7 +13,15 @@ interface AuthContextType {
   signUp: (email: string, password: string, fullName: string, companyName: string) => Promise<void>
   signIn: (email: string, password: string) => Promise<void>
   signOut: () => Promise<void>
-  updateProfile: (fullName: string, companyName: string) => Promise<void>
+  updateProfile: (profileData: {
+    fullName: string
+    companyName: string
+    jobTitle?: string
+    companyAddress?: string
+    companyPhone?: string
+    defaultDiscountRate?: number
+    currencySymbol?: string
+  }) => Promise<void>
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -58,14 +66,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setSession(session)
       setUser(session?.user ?? null)
       setLoading(false)
-
-      // if (event === "SIGNED_IN") {
-      //   console.log("➡️ Redirecting to /dashboard")
-      //   router.push("/dashboard")
-      // } else if (event === "SIGNED_OUT") {
-      //   console.log("➡️ Redirecting to /")
-      //   router.push("/")
-      // }
     })
 
     return () => {
@@ -99,19 +99,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         email: data.user.email!,
         full_name: fullName,
         company_name: companyName,
+        default_discount_rate: 8, // Default 8%
+        currency_symbol: "$", // Default USD
       })
 
       if (profileError) {
         console.error("❌ Profile creation error:", profileError)
-
-        if (profileError.code === "23503") {
-          throw new Error("A user is already registered with this email.")
-        }
-
-        if (profileError.code != "23505") {
-          throw profileError
-        }
-                
+        throw profileError
       }
     }
   }
@@ -137,15 +131,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
-  const updateProfile = async (fullName: string, companyName: string) => {
+  const updateProfile = async (profileData: {
+    fullName: string
+    companyName: string
+    jobTitle?: string
+    companyAddress?: string
+    companyPhone?: string
+    defaultDiscountRate?: number
+    currencySymbol?: string
+  }) => {
     if (!user) throw new Error("No user logged in")
     console.log("✏️ Updating profile for:", user.id)
 
     const { error } = await supabase
       .from("profiles")
       .update({
-        full_name: fullName,
-        company_name: companyName,
+        full_name: profileData.fullName,
+        company_name: profileData.companyName,
+        job_title: profileData.jobTitle,
+        company_address: profileData.companyAddress,
+        company_phone: profileData.companyPhone,
+        default_discount_rate: profileData.defaultDiscountRate,
+        currency_symbol: profileData.currencySymbol,
         updated_at: new Date().toISOString(),
       })
       .eq("id", user.id)
@@ -157,8 +164,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const { error: authError } = await supabase.auth.updateUser({
       data: {
-        full_name: fullName,
-        company_name: companyName,
+        full_name: profileData.fullName,
+        company_name: profileData.companyName,
       },
     })
 

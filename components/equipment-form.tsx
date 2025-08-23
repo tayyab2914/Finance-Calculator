@@ -6,7 +6,8 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Button } from "@/components/ui/button"
-import { Trash2 } from "lucide-react"
+import { Trash2, ChevronDown, ChevronRight } from "lucide-react"
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 import type { Equipment } from "@/app/upgrade-analysis/page"
 import { useEffect, useState } from "react"
 import { calculateUnifiedVolumeTotals } from "@/lib/equipment-calculations"
@@ -32,6 +33,7 @@ export function EquipmentForm({
 }: EquipmentFormProps) {
   const [sellingPrice, setSellingPrice] = useState<number>(equipment.sellingPrice || 0)
   const [rentalAmount, setRentalAmount] = useState<number>(0)
+  const [showLeaseCalculation, setShowLeaseCalculation] = useState(false)
 
   useEffect(() => {
     if (equipment.cashPrice !== undefined && equipment.settlement !== undefined) {
@@ -240,15 +242,14 @@ export function EquipmentForm({
             <Label>Ownership</Label>
             <Select
               value={equipment.ownership}
-              onValueChange={(value: "lease" | "owned" | "cash") => onChange({ ownership: value })}
+              onValueChange={(value: "lease" | "cash") => onChange({ ownership: value })}
             >
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="lease">Lease / Rental</SelectItem>
-                <SelectItem value="owned">Owned</SelectItem>
-                {type === "proposed" && <SelectItem value="cash">Cash</SelectItem>}
+                <SelectItem value="cash">Cash Purchase</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -263,64 +264,74 @@ export function EquipmentForm({
           <Label htmlFor={`copyBased-${equipment.id}`}>Click Based Service Charge?</Label>
         </div>
 
-        {/* Proposed Equipment Specific Fields */}
+        {/* Optional Lease Calculation for Proposed Equipment */}
         {type === "proposed" && equipment.ownership === "lease" && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Lease Calculation</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid gap-4 md:grid-cols-2">
-                <div className="space-y-2">
-                  <Label>Cash Price</Label>
-                  <Input
-                    type="number"
-                    value={equipment.cashPrice || ""}
-                    onChange={(e) => {
-                      const newCashPrice = e.target.value
-                      onChange({ cashPrice: newCashPrice })
-                    }}
-                    placeholder="0.00"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Settlement</Label>
-                  <Input
-                    type="number"
-                    value={equipment.settlement || ""}
-                    onChange={(e) => {
-                      const newSettlement = e.target.value
-                      onChange({ settlement: newSettlement })
-                    }}
-                    placeholder="0.00"
-                  />
-                </div>
-              </div>
-              <div className="grid gap-4 md:grid-cols-2">
-                <div className="space-y-2">
-                  <Label>Selling Price</Label>
-                  <Input type="number" value={sellingPrice} placeholder="0.00" readOnly />
-                </div>
-                <div className="space-y-2">
-                  <Label>Rental Factor</Label>
-                  <Input
-                    type="number"
-                    step="0.000001"
-                    value={equipment.rentalFactor || ""}
-                    onChange={(e) => {
-                      const newRentalFactor = e.target.value
-                      onChange({ rentalFactor: newRentalFactor })
-                    }}
-                    placeholder="0.000000"
-                  />
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label>Calculated Rental Amount</Label>
-                <Input type="number" value={rentalAmount} placeholder="0.00" readOnly />
-              </div>
-            </CardContent>
-          </Card>
+          <Collapsible open={showLeaseCalculation} onOpenChange={setShowLeaseCalculation}>
+            <CollapsibleTrigger asChild>
+              <Button variant="outline" className="w-full justify-between bg-transparent">
+                <span>Lease Calculation (Optional)</span>
+                {showLeaseCalculation ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+              </Button>
+            </CollapsibleTrigger>
+            <CollapsibleContent className="mt-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base">Lease Calculation</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div className="space-y-2">
+                      <Label>Cash Price</Label>
+                      <Input
+                        type="number"
+                        value={equipment.cashPrice || ""}
+                        onChange={(e) => {
+                          const newCashPrice = e.target.value
+                          onChange({ cashPrice: newCashPrice })
+                        }}
+                        placeholder="0.00"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Settlement</Label>
+                      <Input
+                        type="number"
+                        value={equipment.settlement || ""}
+                        onChange={(e) => {
+                          const newSettlement = e.target.value
+                          onChange({ settlement: newSettlement })
+                        }}
+                        placeholder="0.00"
+                      />
+                    </div>
+                  </div>
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div className="space-y-2">
+                      <Label>Selling Price</Label>
+                      <Input type="number" value={sellingPrice} placeholder="0.00" readOnly />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Rental Factor</Label>
+                      <Input
+                        type="number"
+                        step="0.000001"
+                        value={equipment.rentalFactor || ""}
+                        onChange={(e) => {
+                          const newRentalFactor = e.target.value
+                          onChange({ rentalFactor: newRentalFactor })
+                        }}
+                        placeholder="0.000000"
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Calculated Rental Amount</Label>
+                    <Input type="number" value={rentalAmount} placeholder="0.00" readOnly />
+                  </div>
+                </CardContent>
+              </Card>
+            </CollapsibleContent>
+          </Collapsible>
         )}
 
         {/* Lease Details */}
@@ -436,32 +447,30 @@ export function EquipmentForm({
             {/* Volume Growth Rates */}
             {equipment.type === "color" && (
               <div className="space-y-4">
-              <h4 className="font-medium text-gray-900">Color Volume and Growth</h4>
-              <div className="grid gap-4 md:grid-cols-2">
-                <div className="space-y-2">
-                  <Label>Color Monthly Volume</Label>
-                  <Input
-                    type="number"
-                    value={getUnifiedVolume("color", "volume")}
-                    onChange={(e) => updateUnifiedVolume("color", "volume", Number.parseInt(e.target.value) || 0)}
-                    placeholder="0"
-                  />
+                <h4 className="font-medium text-gray-900">Color Volume and Growth</h4>
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label>Color Monthly Volume</Label>
+                    <Input
+                      type="number"
+                      value={getUnifiedVolume("color", "volume")}
+                      onChange={(e) => updateUnifiedVolume("color", "volume", Number.parseInt(e.target.value) || 0)}
+                      placeholder="0"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Color Volume Growth % (Annual)</Label>
+                    <Input
+                      type="number"
+                      value={getUnifiedVolume("color", "growth")}
+                      onChange={(e) => updateUnifiedVolume("color", "growth", e.target.value)}
+                      placeholder="0.00"
+                    />
+                  </div>
                 </div>
-                
-                <div className="space-y-2">
-                  <Label>Color Volume Growth % (Annual)</Label>
-                  <Input
-                    type="number"
-                    value={getUnifiedVolume("color", "growth")}
-                    onChange={(e) => updateUnifiedVolume("color", "growth", e.target.value)}
-                    placeholder="0.00"
-                  />
-                </div>
-        
               </div>
-            </div>
             )}
-            
 
             {/* Unified Volume Comparison Table for Proposed Equipment */}
             {type === "proposed" && (

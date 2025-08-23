@@ -41,6 +41,7 @@ interface AnalysisResultsProps {
   onNavigateBack?: () => void
   initialAnalysisYears?: number
   initialDiscountRate?: number
+  currencySymbol?: string
   readOnly?: boolean
   analysisId?: string
 }
@@ -78,6 +79,7 @@ export function AnalysisResults({
   onNavigateBack,
   initialAnalysisYears = 5,
   initialDiscountRate = 8,
+  currencySymbol = '$',
   readOnly = false,
   analysisId,
 }: AnalysisResultsProps) {
@@ -85,12 +87,19 @@ export function AnalysisResults({
   const [analysisYears, setAnalysisYears] = useState<number>(initialAnalysisYears)
   const [discountRateAnnual, setDiscountRateAnnual] = useState<number>(initialDiscountRate)
   const [customDiscountRate, setCustomDiscountRate] = useState<string>("")
+  const [customAnalysisYear, setCustomAnalysisYear] = useState<string>("")
   const [openEquipment, setOpenEquipment] = useState<string[]>([])
   const [viewMode, setViewMode] = useState<"individual" | "totals">("individual")
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
   const [saveSuccess, setSaveSuccess] = useState<string | null>(null)
   const [analysisTitle, setAnalysisTitle] = useState<string>("")
+  const discountOptions = ["6", "8", "10"];
+
+  // If the current discountRateAnnual is not in options, add it
+  const selectOptions = discountOptions.includes(discountRateAnnual.toString())
+    ? discountOptions
+    : [...discountOptions, discountRateAnnual.toString()];
 
   // Set default title based on client details
   useEffect(() => {
@@ -210,6 +219,23 @@ export function AnalysisResults({
 
     return data
   }, [proposedEquipment, analysisYears])
+
+  const handleAnalysisYearChange = (value: string) => {
+    if (value === "custom") {
+      setCustomAnalysisYear(analysisYears.toString())
+      return
+    }
+    setAnalysisYears(Number.parseFloat(value))
+    setCustomAnalysisYear("")
+  }
+
+  const handleCustomAnalysisYearChange = (value: string) => {
+    setCustomAnalysisYear(value)
+    const numValue = Number.parseFloat(value)
+    if (!isNaN(numValue) && numValue > 0) {
+      setAnalysisYears(numValue)
+    }
+  }
 
   const handleDiscountRateChange = (value: string) => {
     if (value === "custom") {
@@ -462,28 +488,44 @@ export function AnalysisResults({
         </CardHeader>
         <CardContent>
           <div className="grid gap-4 md:grid-cols-2">
+            {/* Analysis Period */}
             <div>
               <Label htmlFor="analysisPeriod" className="block text-sm font-medium text-gray-700">
                 Analysis Period (Years)
               </Label>
-              <Select
-                value={analysisYears.toString()}
-                onValueChange={(value) => setAnalysisYears(Number.parseInt(value))}
-                disabled={readOnly}
-              >
-                <SelectTrigger className="w-[200px]">
-                  <SelectValue placeholder="Select period" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="2">2 Years</SelectItem>
-                  <SelectItem value="3">3 Years</SelectItem>
-                  <SelectItem value="4">4 Years</SelectItem>
-                  <SelectItem value="5">5 Years</SelectItem>
-                  <SelectItem value="6">6 Years</SelectItem>
-                  <SelectItem value="7">7 Years</SelectItem>
-                </SelectContent>
-              </Select>
+              <div className="flex gap-2">
+                <Select
+                  value={customAnalysisYear ? "custom" : analysisYears.toString()}
+                  onValueChange={handleAnalysisYearChange}
+                  disabled={readOnly}
+                >
+                  <SelectTrigger className="w-[200px]">
+                    <SelectValue placeholder="Select period" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="2">2 Years</SelectItem>
+                    <SelectItem value="3">3 Years</SelectItem>
+                    <SelectItem value="4">4 Years</SelectItem>
+                    <SelectItem value="5">5 Years</SelectItem>
+                    <SelectItem value="custom">Custom</SelectItem>
+                  </SelectContent>
+                </Select>
+
+                {(customAnalysisYear || analysisYears.toString() === "custom") && (
+                  <Input
+                    type="number"
+                    step="1"
+                    placeholder="Enter year"
+                    value={customAnalysisYear}
+                    onChange={(e) => handleCustomAnalysisYearChange(e.target.value)}
+                    className="w-[100px]"
+                    disabled={readOnly}
+                  />
+                )}
+              </div>
             </div>
+
+            {/* Discount Rate */}
             <div>
               <Label htmlFor="discountRate" className="block text-sm font-medium text-gray-700">
                 Discount Rate (Annual %)
@@ -498,26 +540,33 @@ export function AnalysisResults({
                     <SelectValue placeholder="Select rate" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="6">6%</SelectItem>
-                    <SelectItem value="8">8%</SelectItem>
-                    <SelectItem value="10">10%</SelectItem>
+                    {selectOptions.map((rate) => (
+                      <SelectItem key={rate} value={rate}>
+                        {rate}%
+                      </SelectItem>
+                    ))}
                     <SelectItem value="custom">Custom</SelectItem>
                   </SelectContent>
                 </Select>
-                {(customDiscountRate || discountRateAnnual.toString() === "custom") && (
-                  <Input
-                    type="number"
-                    step="0.1"
-                    placeholder="Enter %"
-                    value={customDiscountRate}
-                    onChange={(e) => handleCustomDiscountRateChange(e.target.value)}
-                    className="w-[100px]"
-                    disabled={readOnly}
-                  />
-                )}
+
+                {(
+                  customDiscountRate ||
+                  discountRateAnnual.toString() === "custom"
+                ) && (
+                    <Input
+                      type="number"
+                      step="0.1"
+                      placeholder="Enter %"
+                      value={customDiscountRate || discountRateAnnual}
+                      onChange={(e) => handleCustomDiscountRateChange(e.target.value)}
+                      className="w-[100px]"
+                      disabled={readOnly}
+                    />
+                  )}
               </div>
             </div>
           </div>
+
         </CardContent>
       </Card>
 
@@ -556,7 +605,7 @@ export function AnalysisResults({
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-red-600">
-              ${analysisData.currentNPV.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              {currencySymbol}{analysisData.currentNPV.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </div>
             <p className="text-sm text-gray-600 mt-1">{analysisYears}-year net present value</p>
           </CardContent>
@@ -568,7 +617,7 @@ export function AnalysisResults({
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-blue-600">
-              $
+              {currencySymbol}
               {analysisData.proposedNPV.toLocaleString("en-US", {
                 minimumFractionDigits: 2,
                 maximumFractionDigits: 2,
@@ -584,7 +633,7 @@ export function AnalysisResults({
           </CardHeader>
           <CardContent>
             <div className={`text-2xl font-bold ${analysisData.npvSavings >= 0 ? "text-green-600" : "text-red-600"}`}>
-              $
+              {currencySymbol}
               {Math.abs(analysisData.npvSavings).toLocaleString("en-US", {
                 minimumFractionDigits: 2,
                 maximumFractionDigits: 2,
@@ -673,42 +722,42 @@ export function AnalysisResults({
                                   >
                                     <TableCell className="font-medium">{detail.month}</TableCell>
                                     <TableCell className="text-right">
-                                      $
+                                      {currencySymbol}
                                       {detail.leaseAmount.toLocaleString("en-US", {
                                         minimumFractionDigits: 2,
                                         maximumFractionDigits: 2,
                                       })}
                                     </TableCell>
                                     <TableCell className="text-right">
-                                      $
+                                      {currencySymbol}
                                       {detail.blackClickCharges.toLocaleString("en-US", {
                                         minimumFractionDigits: 2,
                                         maximumFractionDigits: 2,
                                       })}
                                     </TableCell>
                                     <TableCell className="text-right">
-                                      $
+                                      {currencySymbol}
                                       {detail.colorClickCharges.toLocaleString("en-US", {
                                         minimumFractionDigits: 2,
                                         maximumFractionDigits: 2,
                                       })}
                                     </TableCell>
                                     <TableCell className="text-right">
-                                      $
+                                      {currencySymbol}
                                       {detail.tonerCosts.toLocaleString("en-US", {
                                         minimumFractionDigits: 2,
                                         maximumFractionDigits: 2,
                                       })}
                                     </TableCell>
                                     <TableCell className="text-right">
-                                      $
+                                      {currencySymbol}
                                       {detail.otherCosts.toLocaleString("en-US", {
                                         minimumFractionDigits: 2,
                                         maximumFractionDigits: 2,
                                       })}
                                     </TableCell>
                                     <TableCell className="text-right font-medium">
-                                      $
+                                      {currencySymbol}
                                       {detail.totalMonthlyCost.toLocaleString("en-US", {
                                         minimumFractionDigits: 2,
                                         maximumFractionDigits: 2,
@@ -788,42 +837,42 @@ export function AnalysisResults({
                                   >
                                     <TableCell className="font-medium">{detail.month}</TableCell>
                                     <TableCell className="text-right">
-                                      $
+                                      {currencySymbol}
                                       {detail.leaseAmount.toLocaleString("en-US", {
                                         minimumFractionDigits: 2,
                                         maximumFractionDigits: 2,
                                       })}
                                     </TableCell>
                                     <TableCell className="text-right">
-                                      $
+                                      {currencySymbol}
                                       {detail.blackClickCharges.toLocaleString("en-US", {
                                         minimumFractionDigits: 2,
                                         maximumFractionDigits: 2,
                                       })}
                                     </TableCell>
                                     <TableCell className="text-right">
-                                      $
+                                      {currencySymbol}
                                       {detail.colorClickCharges.toLocaleString("en-US", {
                                         minimumFractionDigits: 2,
                                         maximumFractionDigits: 2,
                                       })}
                                     </TableCell>
                                     <TableCell className="text-right">
-                                      $
+                                      {currencySymbol}
                                       {detail.tonerCosts.toLocaleString("en-US", {
                                         minimumFractionDigits: 2,
                                         maximumFractionDigits: 2,
                                       })}
                                     </TableCell>
                                     <TableCell className="text-right">
-                                      $
+                                      {currencySymbol}
                                       {detail.otherCosts.toLocaleString("en-US", {
                                         minimumFractionDigits: 2,
                                         maximumFractionDigits: 2,
                                       })}
                                     </TableCell>
                                     <TableCell className="text-right font-medium">
-                                      $
+                                      {currencySymbol}
                                       {detail.totalMonthlyCost.toLocaleString("en-US", {
                                         minimumFractionDigits: 2,
                                         maximumFractionDigits: 2,
@@ -885,7 +934,7 @@ export function AnalysisResults({
 
                               return (
                                 <TableCell key={equipment.id} className="text-right bg-red-50/50">
-                                  $
+                                  {currencySymbol}
                                   {value.toLocaleString("en-US", {
                                     minimumFractionDigits: 2,
                                     maximumFractionDigits: 2,
@@ -894,7 +943,7 @@ export function AnalysisResults({
                               )
                             })}
                             <TableCell className="text-right bg-red-100 font-bold">
-                              $
+                              {currencySymbol}
                               {(row["Total"] || 0).toLocaleString("en-US", {
                                 minimumFractionDigits: 2,
                                 maximumFractionDigits: 2,
@@ -942,7 +991,7 @@ export function AnalysisResults({
 
                               return (
                                 <TableCell key={equipment.id} className="text-right bg-blue-50/50">
-                                  $
+                                  {currencySymbol}
                                   {value.toLocaleString("en-US", {
                                     minimumFractionDigits: 2,
                                     maximumFractionDigits: 2,
@@ -951,7 +1000,7 @@ export function AnalysisResults({
                               )
                             })}
                             <TableCell className="text-right bg-blue-100 font-bold">
-                              $
+                              {currencySymbol}
                               {(row["Total"] || 0).toLocaleString("en-US", {
                                 minimumFractionDigits: 2,
                                 maximumFractionDigits: 2,
@@ -986,8 +1035,8 @@ export function AnalysisResults({
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="month" label={{ value: "Month", position: "insideBottom", offset: -5 }} />
                 <YAxis
-                  label={{ value: "Monthly Cost ($)", angle: -90, position: "insideLeft" }}
-                  tickFormatter={(value) => `$${value.toLocaleString()}`}
+                  label={{ value: `Monthly Cost (${currencySymbol})`, angle: -90, position: "insideLeft" }}
+                  tickFormatter={(value) => `${currencySymbol}${value.toLocaleString()}`}
                 />
                 <Tooltip
                   formatter={(value: number, name: string) => {
@@ -997,7 +1046,7 @@ export function AnalysisResults({
                       savings: "Monthly Savings",
                     }
                     return [
-                      `$${value.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+                      `${currencySymbol}${value.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
                       labels[name as keyof typeof labels] || name,
                     ]
                   }}
@@ -1033,7 +1082,7 @@ export function AnalysisResults({
               >
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="year" />
-                <YAxis tickFormatter={(value) => `$${(value / 1000).toFixed(0)}k`} />
+                <YAxis tickFormatter={(value) => `${currencySymbol}${(value / 1000).toFixed(0)}k`} />
                 <Tooltip
                   formatter={(value: number, name: string) => {
                     const labels = {
@@ -1042,7 +1091,7 @@ export function AnalysisResults({
                       savings: "Annual Savings",
                     }
                     return [
-                      `$${value.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+                      `${currencySymbol}${value.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
                       labels[name as keyof typeof labels] || name,
                     ]
                   }}
@@ -1068,7 +1117,7 @@ export function AnalysisResults({
               <div className="flex justify-between items-center">
                 <span className="text-gray-600">Current Equipment:</span>
                 <span className="font-semibold text-red-600">
-                  $
+                  {currencySymbol}
                   {analysisData.totalCurrentCost.toLocaleString("en-US", {
                     minimumFractionDigits: 2,
                     maximumFractionDigits: 2,
@@ -1078,7 +1127,7 @@ export function AnalysisResults({
               <div className="flex justify-between items-center">
                 <span className="text-gray-600">Proposed Equipment:</span>
                 <span className="font-semibold text-blue-600">
-                  $
+                  {currencySymbol}
                   {analysisData.totalProposedCost.toLocaleString("en-US", {
                     minimumFractionDigits: 2,
                     maximumFractionDigits: 2,
@@ -1091,7 +1140,7 @@ export function AnalysisResults({
                   <span
                     className={`font-bold ${(analysisData.totalCurrentCost - analysisData.totalProposedCost) >= 0 ? "text-green-600" : "text-red-600"}`}
                   >
-                    $
+                    {currencySymbol}
                     {Math.abs(analysisData.totalCurrentCost - analysisData.totalProposedCost).toLocaleString("en-US", {
                       minimumFractionDigits: 2,
                       maximumFractionDigits: 2,
@@ -1111,7 +1160,7 @@ export function AnalysisResults({
             <div
               className={`text-2xl font-bold ${analysisData.firstMonthSavings >= 0 ? "text-green-600" : "text-red-600"}`}
             >
-              $
+              {currencySymbol}
               {Math.abs(analysisData.firstMonthSavings).toLocaleString("en-US", {
                 minimumFractionDigits: 2,
                 maximumFractionDigits: 2,

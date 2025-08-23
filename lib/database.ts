@@ -15,6 +15,21 @@ export interface SavedAnalysis {
   updated_at: string
 }
 
+export interface UserProfile {
+  id: string
+  email: string
+  full_name: string
+  company_name: string
+  job_title?: string
+  company_address?: string
+  company_phone?: string
+  company_logo_url?: string
+  default_discount_rate: number
+  currency_symbol: string
+  created_at: string
+  updated_at: string
+}
+
 export async function saveAnalysis(
   title: string,
   clientDetails: ClientDetails,
@@ -88,7 +103,7 @@ export async function updateAnalysis(
   return data
 }
 
-export async function getUserAnalyses(): Promise<SavedAnalysis[]> {
+export async function getUserAnalyses(searchTerm?: string, sortBy?: string): Promise<SavedAnalysis[]> {
   const {
     data: { user },
   } = await supabase.auth.getUser()
@@ -97,11 +112,31 @@ export async function getUserAnalyses(): Promise<SavedAnalysis[]> {
     throw new Error("User not authenticated")
   }
 
-  const { data, error } = await supabase
-    .from("analyses")
-    .select("*")
-    .eq("user_id", user.id)
-    .order("updated_at", { ascending: false })
+  let query = supabase.from("analyses").select("*").eq("user_id", user.id)
+
+  // Add search functionality
+  if (searchTerm) {
+    query = query.or(
+      `title.ilike.%${searchTerm}%,client_details->>companyName.ilike.%${searchTerm}%,client_details->>email.ilike.%${searchTerm}%`,
+    )
+  }
+
+  // Add sorting
+  switch (sortBy) {
+    case "title":
+      query = query.order("title", { ascending: true })
+      break
+    case "company":
+      query = query.order("client_details->companyName", { ascending: true })
+      break
+    case "created":
+      query = query.order("created_at", { ascending: false })
+      break
+    default:
+      query = query.order("updated_at", { ascending: false })
+  }
+
+  const { data, error } = await query
 
   if (error) {
     throw new Error(`Failed to fetch analyses: ${error.message}`)
@@ -152,7 +187,7 @@ export async function deleteAnalysis(analysisId: string) {
   }
 }
 
-export async function getUserProfile() {
+export async function getUserProfile(): Promise<UserProfile> {
   const {
     data: { user },
   } = await supabase.auth.getUser()
@@ -168,4 +203,37 @@ export async function getUserProfile() {
   }
 
   return data
+}
+
+export async function uploadCompanyLogo(file: File): Promise<string> {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) {
+    throw new Error("User not authenticated")
+  }
+
+  const fileExt = file.name.split(".").pop()
+  const fileName = `${user.id}/logo.${fileExt}`
+
+  const { error: uploadError } = await supabase.storage.from("company-logos").upload(fileName, file, { upsert: true })
+
+  if (uploadError) {
+    throw new Error(`Failed to upload logo: ${uploadError.message}`)
+  }
+
+  const { data } = supabase.storage.from("company-logos").getPublicUrl(fileName)
+
+  // Update profile with logo URL
+  const { error: updateError } = await supabase
+    .from("profiles")
+    .update({ company_logo_url: data.publicUrl })
+    .eq("id", user.id)
+
+  if (updateError) {
+    throw new Error(`Failed to update profile with logo: ${updateError.message}`)
+  }
+
+  return data.publicUrl
 }

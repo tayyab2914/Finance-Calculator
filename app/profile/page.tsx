@@ -1,7 +1,6 @@
 "use client"
 
 import type React from "react"
-
 import { useState, useEffect } from "react"
 import { useAuth } from "@/contexts/auth-context"
 import { ProtectedRoute } from "@/components/auth/protected-route"
@@ -9,9 +8,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { getUserProfile } from "@/lib/database"
-import { Loader2, User } from "lucide-react"
+import { getUserProfile, uploadCompanyLogo } from "@/lib/database"
+import { Loader2, User, Upload, Building2 } from "lucide-react"
 
 export default function ProfilePage() {
   return (
@@ -25,8 +26,15 @@ function ProfileContent() {
   const { user, updateProfile } = useAuth()
   const [fullName, setFullName] = useState("")
   const [companyName, setCompanyName] = useState("")
+  const [jobTitle, setJobTitle] = useState("")
+  const [companyAddress, setCompanyAddress] = useState("")
+  const [companyPhone, setCompanyPhone] = useState("")
+  const [defaultDiscountRate, setDefaultDiscountRate] = useState(8)
+  const [currencySymbol, setCurrencySymbol] = useState("$")
+  const [companyLogoUrl, setCompanyLogoUrl] = useState("")
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [uploadingLogo, setUploadingLogo] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
 
@@ -40,6 +48,12 @@ function ProfileContent() {
       const profile = await getUserProfile()
       setFullName(profile.full_name || "")
       setCompanyName(profile.company_name || "")
+      setJobTitle(profile.job_title || "")
+      setCompanyAddress(profile.company_address || "")
+      setCompanyPhone(profile.company_phone || "")
+      setDefaultDiscountRate(profile.default_discount_rate || 8)
+      setCurrencySymbol(profile.currency_symbol || "$")
+      setCompanyLogoUrl(profile.company_logo_url || "")
     } catch (error) {
       setError(error instanceof Error ? error.message : "Failed to load profile")
     } finally {
@@ -54,12 +68,50 @@ function ProfileContent() {
     setSuccess(null)
 
     try {
-      await updateProfile(fullName, companyName)
+      await updateProfile({
+        fullName,
+        companyName,
+        jobTitle,
+        companyAddress,
+        companyPhone,
+        defaultDiscountRate,
+        currencySymbol,
+      })
       setSuccess("Profile updated successfully!")
     } catch (error) {
       setError(error instanceof Error ? error.message : "Failed to update profile")
     } finally {
       setSaving(false)
+    }
+  }
+
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    // Validate file type
+    if (!file.type.startsWith("image/")) {
+      setError("Please select an image file")
+      return
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      setError("Image must be less than 5MB")
+      return
+    }
+
+    setUploadingLogo(true)
+    setError(null)
+
+    try {
+      const logoUrl = await uploadCompanyLogo(file)
+      setCompanyLogoUrl(logoUrl)
+      setSuccess("Company logo uploaded successfully!")
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "Failed to upload logo")
+    } finally {
+      setUploadingLogo(false)
     }
   }
 
@@ -83,7 +135,8 @@ function ProfileContent() {
         <p className="text-gray-600 mt-2">Manage your account information and preferences.</p>
       </div>
 
-      <div className="max-w-2xl">
+      <div className="max-w-4xl space-y-6">
+        {/* Personal Information */}
         <Card>
           <CardHeader>
             <CardTitle>Personal Information</CardTitle>
@@ -103,35 +156,70 @@ function ProfileContent() {
                 </Alert>
               )}
 
-              <div className="space-y-2">
-                <Label htmlFor="email">Email Address</Label>
-                <Input id="email" type="email" value={user?.email || ""} disabled className="bg-gray-50" />
-                <p className="text-sm text-gray-500">
-                  Email address cannot be changed. Contact support if you need to update this.
-                </p>
+              <div className="grid gap-6 md:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="email">Email Address</Label>
+                  <Input id="email" type="email" value={user?.email || ""} disabled className="bg-gray-50" />
+                  <p className="text-sm text-gray-500">
+                    Email address cannot be changed. Contact support if you need to update this.
+                  </p>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="fullName">Full Name *</Label>
+                  <Input
+                    id="fullName"
+                    type="text"
+                    value={fullName}
+                    onChange={(e) => setFullName(e.target.value)}
+                    required
+                    placeholder="Enter your full name"
+                  />
+                </div>
+              </div>
+
+              <div className="grid gap-6 md:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="companyName">Company Name *</Label>
+                  <Input
+                    id="companyName"
+                    type="text"
+                    value={companyName}
+                    onChange={(e) => setCompanyName(e.target.value)}
+                    required
+                    placeholder="Enter your company name"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="jobTitle">Job Title</Label>
+                  <Input
+                    id="jobTitle"
+                    type="text"
+                    value={jobTitle}
+                    onChange={(e) => setJobTitle(e.target.value)}
+                    placeholder="Enter your job title"
+                  />
+                </div>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="fullName">Full Name</Label>
-                <Input
-                  id="fullName"
-                  type="text"
-                  value={fullName}
-                  onChange={(e) => setFullName(e.target.value)}
-                  required
-                  placeholder="Enter your full name"
+                <Label htmlFor="companyAddress">Company Address</Label>
+                <Textarea
+                  id="companyAddress"
+                  value={companyAddress}
+                  onChange={(e) => setCompanyAddress(e.target.value)}
+                  placeholder="Enter company address"
+                  rows={3}
                 />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="companyName">Company Name</Label>
+                <Label htmlFor="companyPhone">Company Phone</Label>
                 <Input
-                  id="companyName"
-                  type="text"
-                  value={companyName}
-                  onChange={(e) => setCompanyName(e.target.value)}
-                  required
-                  placeholder="Enter your company name"
+                  id="companyPhone"
+                  type="tel"
+                  value={companyPhone}
+                  onChange={(e) => setCompanyPhone(e.target.value)}
+                  placeholder="Enter company phone number"
                 />
               </div>
 
@@ -145,7 +233,99 @@ function ProfileContent() {
           </CardContent>
         </Card>
 
-        <Card className="mt-6">
+        {/* Company Logo */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Building2 className="w-5 h-5" />
+              Company Logo
+            </CardTitle>
+            <CardDescription>Upload your company logo for reports and branding.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {companyLogoUrl && (
+                <div className="flex items-center gap-4">
+                  <img
+                    src={companyLogoUrl || "/placeholder.svg"}
+                    alt="Company Logo"
+                    className="w-16 h-16 object-contain border rounded-lg"
+                  />
+                  <div>
+                    <p className="text-sm font-medium">Current Logo</p>
+                    <p className="text-xs text-gray-500">Upload a new image to replace</p>
+                  </div>
+                </div>
+              )}
+
+              <div className="flex items-center gap-4">
+                <input type="file" accept="image/*" onChange={handleLogoUpload} className="hidden" id="logo-upload" />
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => document.getElementById("logo-upload")?.click()}
+                  disabled={uploadingLogo}
+                >
+                  {uploadingLogo ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <Upload className="mr-2 h-4 w-4" />
+                  )}
+                  {companyLogoUrl ? "Replace Logo" : "Upload Logo"}
+                </Button>
+                <p className="text-sm text-gray-500">Recommended: PNG or JPG, max 5MB</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Report Settings */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Report Settings</CardTitle>
+            <CardDescription>Configure default settings for your financial reports.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-6 md:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="defaultDiscountRate">Default Discount Rate (%)</Label>
+                <Input
+                  id="defaultDiscountRate"
+                  type="number"
+                  step="0.1"
+                  min="0"
+                  max="100"
+                  value={defaultDiscountRate}
+                  onChange={(e) => setDefaultDiscountRate(Number.parseFloat(e.target.value) || 8)}
+                  placeholder="8.0"
+                />
+                <p className="text-sm text-gray-500">This rate will be used as default for new analyses</p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="currencySymbol">Currency Symbol</Label>
+                <Select value={currencySymbol} onValueChange={setCurrencySymbol}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="$">$ (USD)</SelectItem>
+                    <SelectItem value="€">€ (EUR)</SelectItem>
+                    <SelectItem value="£">£ (GBP)</SelectItem>
+                    <SelectItem value="¥">¥ (JPY)</SelectItem>
+                    <SelectItem value="₹">₹ (INR)</SelectItem>
+                    <SelectItem value="C$">C$ (CAD)</SelectItem>
+                    <SelectItem value="A$">A$ (AUD)</SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-sm text-gray-500">Currency symbol used in reports and analyses</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Account Information */}
+        <Card>
           <CardHeader>
             <CardTitle>Account Information</CardTitle>
             <CardDescription>Your account details and statistics.</CardDescription>

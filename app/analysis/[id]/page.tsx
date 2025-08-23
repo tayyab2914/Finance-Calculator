@@ -9,6 +9,8 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import { ArrowLeft, Loader2 } from "lucide-react"
 import Link from "next/link"
+import { useAuth } from "@/contexts/auth-context"
+import { getUserProfile } from "@/lib/database"
 
 export default function AnalysisPage() {
   return (
@@ -24,10 +26,24 @@ function AnalysisContent() {
   const [analysis, setAnalysis] = useState<SavedAnalysis | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const { user } = useAuth()
+  const [currencySymbol, setCurrencySymbol] = useState('$')
 
   useEffect(() => {
     loadAnalysis()
+    loadUserDefaults()
   }, [params.id])
+
+  const loadUserDefaults = async () => {
+    if (user) {
+      try {
+        const profile = await getUserProfile()
+        setCurrencySymbol(profile.currency_symbol || '$')
+      } catch (error) {
+        console.error("Failed to load user profile:", error)
+      }
+    }
+  }
 
   const loadAnalysis = async () => {
     try {
@@ -99,6 +115,7 @@ function AnalysisContent() {
         initialDiscountRate={analysis.analysis_settings.discountRateAnnual}
         readOnly={true}
         analysisId={analysis.id}
+        currencySymbol={currencySymbol}
       />
     </div>
   )
