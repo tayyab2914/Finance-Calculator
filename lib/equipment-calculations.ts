@@ -78,6 +78,14 @@ export function calculateLeasePayment(
   isPaymentMonth: boolean
   isPostInitialPeriod: boolean
 } {
+  if (equipment.ownership === "cash" && equipment.cashPrice && month === 1) {
+    return {
+      amount: -equipment.cashPrice,
+      escalationApplied: false,
+      isPaymentMonth: false,
+      isPostInitialPeriod: false,
+    }
+  }
   if (equipment.ownership !== "lease" || !equipment.leaseDetails) {
     return {
       amount: 0,
@@ -207,7 +215,8 @@ export function calculateTonerCosts(equipment: Equipment, month: number): number
     return 0
   }
 
-  const yearsPassed = Math.floor((month - 1) / 12)
+  // const yearsPassed = Math.floor((month - 1) / 12)
+  const yearsPassed = 0
   const {
     blackCostPerCartridge,
     colorCostPerCartridge,

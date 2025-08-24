@@ -240,15 +240,14 @@ export function EquipmentForm({
             <Label>Ownership</Label>
             <Select
               value={equipment.ownership}
-              onValueChange={(value: "lease" | "owned" | "cash") => onChange({ ownership: value })}
+              onValueChange={(value: "lease" | "cash") => onChange({ ownership: value })}
             >
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="lease">Lease / Rental</SelectItem>
-                <SelectItem value="owned">Owned</SelectItem>
-                {type === "proposed" && <SelectItem value="cash">Cash</SelectItem>}
+                <SelectItem value="cash">Cash</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -318,6 +317,28 @@ export function EquipmentForm({
               <div className="space-y-2">
                 <Label>Calculated Rental Amount</Label>
                 <Input type="number" value={rentalAmount} placeholder="0.00" readOnly />
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {type === "proposed" && equipment.ownership === "cash" && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Cash Purchase</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label>Cash Price</Label>
+                <Input
+                  type="number"
+                  value={equipment.cashPrice || ""}
+                  onChange={(e) => onChange({ cashPrice: e.target.value })}
+                  placeholder="0.00"
+                />
+                <p className="text-sm text-muted-foreground">
+                  This amount will create a negative cash flow in month 1 only
+                </p>
               </div>
             </CardContent>
           </Card>
