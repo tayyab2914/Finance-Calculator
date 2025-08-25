@@ -20,7 +20,20 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Button } from "@/components/ui/button"
-import { Download, ChevronDown, ChevronRight, Monitor, Printer, Save, Loader2 } from "lucide-react"
+import {
+  Download,
+  ChevronDown,
+  ChevronRight,
+  Monitor,
+  Printer,
+  Save,
+  Loader2,
+  Mail,
+  Phone,
+  Building2,
+  User,
+  MapPin,
+} from "lucide-react"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { saveAnalysis, updateAnalysis } from "@/lib/database"
@@ -79,7 +92,7 @@ export function AnalysisResults({
   onNavigateBack,
   initialAnalysisYears = 5,
   initialDiscountRate = 8,
-  currencySymbol = '$',
+  currencySymbol = "$",
   readOnly = false,
   analysisId,
 }: AnalysisResultsProps) {
@@ -94,12 +107,12 @@ export function AnalysisResults({
   const [saveError, setSaveError] = useState<string | null>(null)
   const [saveSuccess, setSaveSuccess] = useState<string | null>(null)
   const [analysisTitle, setAnalysisTitle] = useState<string>("")
-  const discountOptions = ["6", "8", "10"];
+  const discountOptions = ["6", "8", "10"]
 
   // If the current discountRateAnnual is not in options, add it
   const selectOptions = discountOptions.includes(discountRateAnnual.toString())
     ? discountOptions
-    : [...discountOptions, discountRateAnnual.toString()];
+    : [...discountOptions, discountRateAnnual.toString()]
 
   // Set default title based on client details
   useEffect(() => {
@@ -406,7 +419,6 @@ export function AnalysisResults({
     }
   }
 
-
   const getEquipmentIcon = (equipment: Equipment) => {
     return equipment.type === "color" ? (
       <Monitor className="w-4 h-4 text-blue-600" />
@@ -430,6 +442,125 @@ export function AnalysisResults({
           </Button>
         </div>
       )}
+
+      {/* Client Details & Contact Information */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Building2 className="w-5 h-5" />
+            Client Information & Contact Details
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid gap-6 md:grid-cols-2">
+            {/* Company Information */}
+            <div className="space-y-4">
+              <div>
+                <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                  <Building2 className="w-4 h-4" />
+                  Company Details
+                </h3>
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-medium text-gray-600 w-20">Company:</span>
+                    <span className="text-sm text-gray-900">{clientDetails.companyName}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Mail className="w-4 h-4 text-gray-400" />
+                    <span className="text-sm font-medium text-gray-600 w-16">Email:</span>
+                    <a
+                      href={`mailto:${clientDetails.email}`}
+                      className="text-sm text-blue-600 hover:text-blue-800 underline"
+                    >
+                      {clientDetails.email}
+                    </a>
+                  </div>
+                  {clientDetails.referenceNumber && (
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-medium text-gray-600 w-20">Reference:</span>
+                      <span className="text-sm text-gray-900 bg-gray-100 px-2 py-1 rounded">
+                        {clientDetails.referenceNumber}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Analysis Summary */}
+              <div>
+                <h3 className="font-semibold text-gray-900 mb-3">Analysis Summary</h3>
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-medium text-gray-600 w-20">Current:</span>
+                    <span className="text-sm text-red-600 font-medium">{currentEquipment.length} equipment</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-medium text-gray-600 w-20">Proposed:</span>
+                    <span className="text-sm text-blue-600 font-medium">{proposedEquipment.length} equipment</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-medium text-gray-600 w-20">Period:</span>
+                    <span className="text-sm text-gray-900">
+                      {analysisYears} years ({analysisYears * 12} months)
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Contact Information */}
+            <div className="space-y-4">
+              <div>
+                <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                  <User className="w-4 h-4" />
+                  Contact Information
+                </h3>
+                <div className="space-y-3">
+                  {clientDetails.contactPersonName ? (
+                    <div className="p-3 bg-white rounded-lg border border-grey-200">
+                      <div className="flex items-center gap-2 mb-2">
+                        <User className="w-4 h-4 text-blue-600" />
+                        <span className="font-medium text-blue-900">{clientDetails.contactPersonName}</span>
+                      </div>
+
+                      {clientDetails.contactNumber && (
+                        <div className="flex items-center gap-2 mb-2">
+                          <Phone className="w-4 h-4 text-blue-600" />
+                          <a
+                            href={`tel:${clientDetails.contactNumber}`}
+                            className="text-sm text-blue-600 hover:text-blue-800 underline"
+                          >
+                            {clientDetails.contactNumber}
+                          </a>
+                        </div>
+                      )}
+
+                      {clientDetails.contactAddress && (
+                        <div className="flex items-start gap-2">
+                          <MapPin className="w-4 h-4 text-blue-600 mt-0.5" />
+                          <span className="text-sm text-blue-800 leading-relaxed">{clientDetails.contactAddress}</span>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="p-3 bg-gray-50 rounded-lg border border-gray-200">
+                      <div className="flex items-center gap-2 text-gray-500">
+                        <User className="w-4 h-4" />
+                        <span className="text-sm italic">No contact person details provided</span>
+                      </div>
+                      <div className="mt-2 text-xs text-gray-400">
+                        Contact information can be added when creating the analysis
+                      </div>
+                    </div>
+                  )}
+
+                  
+                </div>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Save Analysis Section */}
       {!readOnly && user && (
@@ -542,49 +673,18 @@ export function AnalysisResults({
                   </SelectContent>
                 </Select>
 
-                {(
-                  customDiscountRate ||
-                  discountRateAnnual.toString() === "custom"
-                ) && (
-                    <Input
-                      type="number"
-                      step="0.1"
-                      placeholder="Enter %"
-                      value={customDiscountRate || discountRateAnnual}
-                      onChange={(e) => handleCustomDiscountRateChange(e.target.value)}
-                      className="w-[100px]"
-                      disabled={readOnly}
-                    />
-                  )}
+                {(customDiscountRate || discountRateAnnual.toString() === "custom") && (
+                  <Input
+                    type="number"
+                    step="0.1"
+                    placeholder="Enter %"
+                    value={customDiscountRate || discountRateAnnual}
+                    onChange={(e) => handleCustomDiscountRateChange(e.target.value)}
+                    className="w-[100px]"
+                    disabled={readOnly}
+                  />
+                )}
               </div>
-            </div>
-          </div>
-
-        </CardContent>
-      </Card>
-
-      {/* Analysis Summary */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Analysis Summary</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid gap-4 md:grid-cols-2">
-            <div>
-              <h3 className="font-medium text-gray-900">Client Details</h3>
-              <p className="text-sm text-gray-600">Company: {clientDetails.companyName}</p>
-              <p className="text-sm text-gray-600">Email: {clientDetails.email}</p>
-              {clientDetails.referenceNumber && (
-                <p className="text-sm text-gray-600">Reference: {clientDetails.referenceNumber}</p>
-              )}
-            </div>
-            <div>
-              <h3 className="font-medium text-gray-900">Equipment Count</h3>
-              <p className="text-sm text-gray-600">Current Equipment: {currentEquipment.length}</p>
-              <p className="text-sm text-gray-600">Proposed Equipment: {proposedEquipment.length}</p>
-              <p className="text-sm text-gray-600">
-                Analysis Period: {analysisYears} years ({analysisYears * 12} months)
-              </p>
             </div>
           </div>
         </CardContent>
@@ -598,7 +698,8 @@ export function AnalysisResults({
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-red-600">
-              {currencySymbol}{analysisData.currentNPV.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              {currencySymbol}
+              {analysisData.currentNPV.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </div>
             <p className="text-sm text-gray-600 mt-1">{analysisYears}-year net present value</p>
           </CardContent>
@@ -1181,7 +1282,6 @@ export function AnalysisResults({
                   {analysisYears} years ({analysisYears * 12} months)
                 </span>
               </div>
-
             </div>
           </CardContent>
         </Card>

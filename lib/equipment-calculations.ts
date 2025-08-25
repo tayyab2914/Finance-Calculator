@@ -130,6 +130,10 @@ export function calculateLeasePayment(
       }
     }
   } else {
+
+    if (month > monthsRemaining) {
+      isPostInitial = true
+    }
     // For proposed equipment: Escalations occur every 12 months from start
     escalationCount = Math.floor((month - 1) / 12)
     escalationApplied = (month - 1) % 12 === 0 && month !== 1

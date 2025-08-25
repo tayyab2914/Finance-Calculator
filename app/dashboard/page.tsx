@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { getUserAnalyses, deleteAnalysis, type SavedAnalysis } from "@/lib/database"
-import { Loader2, Plus, Search, Calendar, Building2, Mail, Trash2, Eye, Filter, SortAsc } from "lucide-react"
+import { Loader2, Plus, Search, Trash2, Eye, Filter, SortAsc } from "lucide-react"
 import Link from "next/link"
 
 export default function DashboardPage() {
@@ -236,66 +236,105 @@ function DashboardContent() {
               )}
             </div>
           ) : (
-            <div className="space-y-4">
-              {filteredAnalyses.map((analysis) => (
-                <div key={analysis.id} className="border rounded-lg p-4 hover:bg-gray-50 transition-colors">
-                  <div className="flex justify-between items-start">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-3 mb-2">
-                        <h3 className="text-lg font-semibold text-gray-900">{analysis.title}</h3>
-                        <Badge variant="secondary">{analysis.analysis_settings.analysisYears} years</Badge>
-                      </div>
-
-                      <div className="grid gap-2 sm:grid-cols-2 text-sm text-gray-600 mb-3">
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-gray-200">
+                    <th className="text-left py-3 px-2 font-medium text-gray-700">Analysis Title</th>
+                    <th className="text-left py-3 px-2 font-medium text-gray-700">Company</th>
+                    <th className="text-left py-3 px-2 font-medium text-gray-700">Email</th>
+                    <th className="text-center py-3 px-2 font-medium text-gray-700">Period</th>
+                    <th className="text-center py-3 px-2 font-medium text-gray-700">Current Equip</th>
+                    <th className="text-center py-3 px-2 font-medium text-gray-700">Proposed Equip</th>
+                    <th className="text-left py-3 px-2 font-medium text-gray-700">Last Updated</th>
+                    <th className="text-center py-3 px-2 font-medium text-gray-700">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredAnalyses.map((analysis) => (
+                    <tr key={analysis.id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
+                      <td className="py-3 px-2">
                         <div className="flex items-center gap-2">
-                          <Building2 className="w-4 h-4" />
-                          <span>{analysis.client_details.companyName}</span>
+                          <span className="font-medium text-gray-900 truncate max-w-[200px]" title={analysis.title}>
+                            {analysis.title}
+                          </span>
+                          {analysis.client_details.referenceNumber && (
+                            <Badge variant="outline" className="text-xs">
+                              {analysis.client_details.referenceNumber}
+                            </Badge>
+                          )}
                         </div>
-                        <div className="flex items-center gap-2">
-                          <Mail className="w-4 h-4" />
-                          <span>{analysis.client_details.email}</span>
+                      </td>
+                      <td className="py-3 px-2">
+                        <span
+                          className="text-gray-900 truncate max-w-[150px] block"
+                          title={analysis.client_details.companyName}
+                        >
+                          {analysis.client_details.companyName}
+                        </span>
+                      </td>
+                      <td className="py-3 px-2">
+                        <span
+                          className="text-gray-600 truncate max-w-[180px] block"
+                          title={analysis.client_details.email}
+                        >
+                          {analysis.client_details.email}
+                        </span>
+                      </td>
+                      <td className="py-3 px-2 text-center">
+                        <Badge variant="secondary" className="text-xs">
+                          {analysis.analysis_settings.analysisYears}Y
+                        </Badge>
+                      </td>
+                      <td className="py-3 px-2 text-center">
+                        <span className="text-sm font-medium text-red-600">{analysis.current_equipment.length}</span>
+                      </td>
+                      <td className="py-3 px-2 text-center">
+                        <span className="text-sm font-medium text-blue-600">{analysis.proposed_equipment.length}</span>
+                      </td>
+                      <td className="py-3 px-2">
+                        <div className="text-sm text-gray-600">
+                          <div>
+                            {new Date(analysis.updated_at).toLocaleDateString("en-US", {
+                              month: "short",
+                              day: "numeric",
+                              year: "numeric",
+                            })}
+                          </div>
+                          <div className="text-xs text-gray-400">
+                            {new Date(analysis.updated_at).toLocaleTimeString("en-US", {
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            })}
+                          </div>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <Calendar className="w-4 h-4" />
-                          <span>Updated: {formatDate(analysis.updated_at)}</span>
+                      </td>
+                      <td className="py-3 px-2">
+                        <div className="flex items-center justify-center gap-1">
+                          <Link href={`/analysis/${analysis.id}`}>
+                            <Button variant="outline" size="sm" className="h-8 px-2 bg-transparent">
+                              <Eye className="w-3 h-3" />
+                            </Button>
+                          </Link>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleDeleteAnalysis(analysis.id)}
+                            disabled={deletingId === analysis.id}
+                            className="h-8 px-2 text-red-600 hover:text-red-700 hover:bg-red-50"
+                          >
+                            {deletingId === analysis.id ? (
+                              <Loader2 className="w-3 h-3 animate-spin" />
+                            ) : (
+                              <Trash2 className="w-3 h-3" />
+                            )}
+                          </Button>
                         </div>
-                        <div className="text-sm">
-                          <span className="font-medium">Equipment:</span> {analysis.current_equipment.length} current,{" "}
-                          {analysis.proposed_equipment.length} proposed
-                        </div>
-                      </div>
-
-                      {analysis.client_details.referenceNumber && (
-                        <div className="text-sm text-gray-500 mb-2">
-                          <span className="font-medium">Reference:</span> {analysis.client_details.referenceNumber}
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="flex items-center gap-2 ml-4">
-                      <Link href={`/analysis/${analysis.id}`}>
-                        <Button variant="outline" size="sm">
-                          <Eye className="w-4 h-4 mr-2" />
-                          View
-                        </Button>
-                      </Link>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleDeleteAnalysis(analysis.id)}
-                        disabled={deletingId === analysis.id}
-                        className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                      >
-                        {deletingId === analysis.id ? (
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                        ) : (
-                          <Trash2 className="w-4 h-4" />
-                        )}
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-              ))}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           )}
         </CardContent>

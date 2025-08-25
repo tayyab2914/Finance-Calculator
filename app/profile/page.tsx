@@ -136,6 +136,52 @@ function ProfileContent() {
       </div>
 
       <div className="max-w-4xl space-y-6">
+                {/* Company Logo */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Building2 className="w-5 h-5" />
+              Company Logo
+            </CardTitle>
+            <CardDescription>Upload your company logo for reports and branding.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {companyLogoUrl && (
+                <div className="flex items-center gap-4">
+                  <img
+                    src={companyLogoUrl || "/placeholder.svg"}
+                    alt="Company Logo"
+                    className="w-16 h-16 object-contain border rounded-lg"
+                  />
+                  <div>
+                    <p className="text-sm font-medium">Current Logo</p>
+                    <p className="text-xs text-gray-500">Upload a new image to replace</p>
+                  </div>
+                </div>
+              )}
+
+              <div className="flex items-center gap-4">
+                <input type="file" accept="image/*" onChange={handleLogoUpload} className="hidden" id="logo-upload" />
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => document.getElementById("logo-upload")?.click()}
+                  disabled={uploadingLogo}
+                >
+                  {uploadingLogo ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <Upload className="mr-2 h-4 w-4" />
+                  )}
+                  {companyLogoUrl ? "Replace Logo" : "Upload Logo"}
+                </Button>
+                <p className="text-sm text-gray-500">Recommended: PNG or JPG, max 5MB</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
         {/* Personal Information */}
         <Card>
           <CardHeader>
@@ -223,62 +269,7 @@ function ProfileContent() {
                 />
               </div>
 
-              <div className="flex justify-end">
-                <Button type="submit" disabled={saving}>
-                  {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  Save Changes
-                </Button>
-              </div>
-            </form>
-          </CardContent>
-        </Card>
-
-        {/* Company Logo */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Building2 className="w-5 h-5" />
-              Company Logo
-            </CardTitle>
-            <CardDescription>Upload your company logo for reports and branding.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {companyLogoUrl && (
-                <div className="flex items-center gap-4">
-                  <img
-                    src={companyLogoUrl || "/placeholder.svg"}
-                    alt="Company Logo"
-                    className="w-16 h-16 object-contain border rounded-lg"
-                  />
-                  <div>
-                    <p className="text-sm font-medium">Current Logo</p>
-                    <p className="text-xs text-gray-500">Upload a new image to replace</p>
-                  </div>
-                </div>
-              )}
-
-              <div className="flex items-center gap-4">
-                <input type="file" accept="image/*" onChange={handleLogoUpload} className="hidden" id="logo-upload" />
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => document.getElementById("logo-upload")?.click()}
-                  disabled={uploadingLogo}
-                >
-                  {uploadingLogo ? (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  ) : (
-                    <Upload className="mr-2 h-4 w-4" />
-                  )}
-                  {companyLogoUrl ? "Replace Logo" : "Upload Logo"}
-                </Button>
-                <p className="text-sm text-gray-500">Recommended: PNG or JPG, max 5MB</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
+              
         {/* Report Settings */}
         <Card>
           <CardHeader>
@@ -323,6 +314,21 @@ function ProfileContent() {
             </div>
           </CardContent>
         </Card>
+
+              <div className="flex justify-end">
+                <Button type="submit" disabled={saving}>
+                  {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  Save Changes
+                </Button>
+              </div>
+            </form>
+          </CardContent>
+
+          
+        </Card>
+
+
+
 
         {/* Account Information */}
         <Card>
