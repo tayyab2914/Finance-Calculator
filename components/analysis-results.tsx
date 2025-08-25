@@ -406,13 +406,6 @@ export function AnalysisResults({
     }
   }
 
-  const formatPaybackPeriod = (months: number | null): string => {
-    if (months === null) return "Beyond analysis period"
-    if (months <= 12) return `${months} months`
-    const years = Math.floor(months / 12)
-    const remainingMonths = months % 12
-    return remainingMonths > 0 ? `${years} years, ${remainingMonths} months` : `${years} years`
-  }
 
   const getEquipmentIcon = (equipment: Equipment) => {
     return equipment.type === "color" ? (
@@ -820,7 +813,7 @@ export function AnalysisResults({
                               <TableHeader>
                                 <TableRow>
                                   <TableHead>Month</TableHead>
-                                  <TableHead className="text-right">Lease Amount</TableHead>
+                                  <TableHead className="text-right">Lease Amount/Cash</TableHead>
                                   <TableHead className="text-right">Black Clicks</TableHead>
                                   <TableHead className="text-right">Color Clicks</TableHead>
                                   <TableHead className="text-right">Toner/Ink</TableHead>
@@ -1188,18 +1181,7 @@ export function AnalysisResults({
                   {analysisYears} years ({analysisYears * 12} months)
                 </span>
               </div>
-              <div className="flex justify-between items-center">
-                <span className="text-gray-600">ROI:</span>
-                <span className={`font-semibold ${analysisData.npvSavings >= 0 ? "text-green-600" : "text-red-600"}`}>
-                  {analysisData.proposedNPV !== 0
-                    ? `${((analysisData.npvSavings / Math.abs(analysisData.proposedNPV)) * 100).toFixed(1)}%`
-                    : "N/A"}
-                </span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-gray-600">Payback Period:</span>
-                <span className="font-semibold">{formatPaybackPeriod(analysisData.paybackPeriodMonths)}</span>
-              </div>
+
             </div>
           </CardContent>
         </Card>

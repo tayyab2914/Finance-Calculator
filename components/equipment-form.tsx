@@ -249,7 +249,7 @@ export function EquipmentForm({
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="lease">Lease / Rental</SelectItem>
-                <SelectItem value="cash">Cash Purchase</SelectItem>
+                <SelectItem value="cash">Cash</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -332,6 +332,28 @@ export function EquipmentForm({
               </Card>
             </CollapsibleContent>
           </Collapsible>
+        )}
+
+        {type === "proposed" && equipment.ownership === "cash" && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Cash Purchase</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label>Cash Price</Label>
+                <Input
+                  type="number"
+                  value={equipment.cashPrice || ""}
+                  onChange={(e) => onChange({ cashPrice: e.target.value })}
+                  placeholder="0.00"
+                />
+                <p className="text-sm text-muted-foreground">
+                  This amount will create a negative cash flow in month 1 only
+                </p>
+              </div>
+            </CardContent>
+          </Card>
         )}
 
         {/* Lease Details */}
