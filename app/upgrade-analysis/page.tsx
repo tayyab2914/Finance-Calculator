@@ -94,6 +94,7 @@ export default function UpgradeAnalysisPage() {
   })
   const [currentEquipment, setCurrentEquipment] = useState<Equipment[]>([])
   const [proposedEquipment, setProposedEquipment] = useState<Equipment[]>([])
+  const [applyGrowthToAll, setApplyGrowthToAll] = useState(false)
 
   // Load user's default discount rate
   useEffect(() => {
@@ -242,6 +243,8 @@ export default function UpgradeAnalysisPage() {
                         equipment={equipment}
                         index={index}
                         type="current"
+                        applyGrowthToAll={applyGrowthToAll}
+                        setApplyGrowthToAll={setApplyGrowthToAll} 
                         onChange={(updates) => updateCurrentEquipment(equipment.id, updates)}
                         onRemove={() => removeCurrentEquipment(equipment.id)}
                         allCurrentEquipment={currentEquipment}
@@ -289,6 +292,8 @@ export default function UpgradeAnalysisPage() {
                         key={equipment.id}
                         equipment={equipment}
                         index={index}
+                        applyGrowthToAll={applyGrowthToAll}
+                        setApplyGrowthToAll={setApplyGrowthToAll} 
                         type="proposed"
                         onChange={(updates) => updateProposedEquipment(equipment.id, updates)}
                         onRemove={() => removeProposedEquipment(equipment.id)}

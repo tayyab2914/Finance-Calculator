@@ -16,6 +16,8 @@ interface EquipmentFormProps {
   equipment: Equipment
   index: number
   type: "current" | "proposed"
+  applyGrowthToAll: boolean
+  setApplyGrowthToAll: React.Dispatch<React.SetStateAction<boolean>>
   onChange: (updates: Partial<Equipment>) => void
   onRemove: () => void
   allCurrentEquipment?: Equipment[]
@@ -28,6 +30,8 @@ export function EquipmentForm({
   type,
   onChange,
   onRemove,
+  applyGrowthToAll,
+  setApplyGrowthToAll,
   allCurrentEquipment = [],
   allProposedEquipment = [],
 }: EquipmentFormProps) {
@@ -155,21 +159,58 @@ export function EquipmentForm({
   }
 
   // Get unified volume values (prefer click charges, fallback to toner costs)
-  const getUnifiedVolume = (colorType: "black" | "color", field: "volume" | "growth") => {
-    if (field === "volume") {
-      if (colorType === "black") {
-        return equipment.clickCharges?.black?.monthlyVolume || equipment.tonerCosts?.blackMonthlyVolume || ""
-      } else {
-        return equipment.clickCharges?.color?.monthlyVolume || equipment.tonerCosts?.colorMonthlyVolume || ""
-      }
-    } else {
-      if (colorType === "black") {
-        return equipment.clickCharges?.black?.growthPercent || equipment.tonerCosts?.blackVolumeGrowthPercent || ""
-      } else {
-        return equipment.clickCharges?.color?.growthPercent || equipment.tonerCosts?.colorVolumeGrowthPercent || ""
+  const getUnifiedVolume = (
+    colorType: "black" | "color",
+    field: "volume" | "growth"
+  ) => {
+    // Handle growth % default logic
+    if (field === "growth") {
+      if ((index > 0 && allCurrentEquipment.length > 0) || (type === "proposed")) {
+        // First try the equipment’s own growthPercent
+        const ownValue =
+          colorType === "black"
+            ? equipment.clickCharges?.black?.growthPercent ??
+            equipment.tonerCosts?.blackVolumeGrowthPercent
+            : equipment.clickCharges?.color?.growthPercent ??
+            equipment.tonerCosts?.colorVolumeGrowthPercent
+
+        if (ownValue !== undefined && ownValue !== null) {
+          return ownValue
+        }
+
+        // Otherwise, fallback to first equipment’s growthPercent
+        const first = allCurrentEquipment[0]
+        return colorType === "black"
+          ? first.clickCharges?.black?.growthPercent ??
+          first.tonerCosts?.blackVolumeGrowthPercent ??
+          ""
+          : first.clickCharges?.color?.growthPercent ??
+          first.tonerCosts?.colorVolumeGrowthPercent ??
+          ""
       }
     }
+
+    // Normal logic for volume or growth
+    if (field === "volume") {
+      return colorType === "black"
+        ? equipment.clickCharges?.black?.monthlyVolume ??
+        equipment.tonerCosts?.blackMonthlyVolume ??
+        ""
+        : equipment.clickCharges?.color?.monthlyVolume ??
+        equipment.tonerCosts?.colorMonthlyVolume ??
+        ""
+    } else {
+      return colorType === "black"
+        ? equipment.clickCharges?.black?.growthPercent ??
+        equipment.tonerCosts?.blackVolumeGrowthPercent ??
+        ""
+        : equipment.clickCharges?.color?.growthPercent ??
+        equipment.tonerCosts?.colorVolumeGrowthPercent ??
+        ""
+    }
   }
+
+
 
   // Calculate unified volume totals for comparison
   const currentTotals = calculateUnifiedVolumeTotals(allCurrentEquipment)
@@ -461,6 +502,10 @@ export function EquipmentForm({
                     value={getUnifiedVolume("black", "growth")}
                     onChange={(e) => updateUnifiedVolume("black", "growth", e.target.value)}
                     placeholder="0.00"
+                    readOnly={
+                      (type === "current" && applyGrowthToAll && index > 0) ||
+                      (type === "proposed" && applyGrowthToAll)
+                    }
                   />
                 </div>
               </div>
@@ -488,9 +533,25 @@ export function EquipmentForm({
                       value={getUnifiedVolume("color", "growth")}
                       onChange={(e) => updateUnifiedVolume("color", "growth", e.target.value)}
                       placeholder="0.00"
+                      readOnly={
+                        (type === "current" && applyGrowthToAll && index > 0) ||
+                        (type === "proposed" && applyGrowthToAll)
+                      }
                     />
                   </div>
                 </div>
+              </div>
+            )}
+
+            {index === 0 && type === "current" && (
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  checked={applyGrowthToAll}
+                  onCheckedChange={(checked) => setApplyGrowthToAll(!!checked)}
+                />
+                <Label >
+                  Apply Growth % to all equipments
+                </Label>
               </div>
             )}
 
