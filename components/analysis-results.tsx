@@ -554,7 +554,7 @@ export function AnalysisResults({
                     </div>
                   )}
 
-                  
+
                 </div>
               </div>
             </div>
@@ -742,9 +742,12 @@ export function AnalysisResults({
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>Equipment Cash Flow Details</CardTitle>
-          <div className="flex items-center gap-4">
-            <Select value={viewMode} onValueChange={(value: "individual" | "totals") => setViewMode(value)}>
-              <SelectTrigger className="w-[200px]">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 w-full">
+            <Select
+              value={viewMode}
+              onValueChange={(value: "individual" | "totals") => setViewMode(value)}
+            >
+              <SelectTrigger className="w-full sm:w-[200px]">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -752,11 +755,18 @@ export function AnalysisResults({
                 <SelectItem value="totals">Equipment Totals</SelectItem>
               </SelectContent>
             </Select>
-            <Button onClick={exportToCSV} variant="outline" size="sm">
+
+            <Button
+              onClick={exportToCSV}
+              variant="outline"
+              size="sm"
+              className="w-full sm:w-auto"
+            >
               <Download className="w-4 h-4 mr-2" />
               Export CSV
             </Button>
           </div>
+
         </CardHeader>
         <CardContent>
           {viewMode === "individual" ? (
