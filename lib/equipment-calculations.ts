@@ -173,6 +173,7 @@ export function calculateClickCharges(
   const monthsUntilFirstEscalation = monthsRemaining % 12 === 0 ? 12 : monthsRemaining % 12
 
   const yearsPassed = 1 + Math.floor((month - 1 - monthsUntilFirstEscalation) / 12)
+  // const yearsPassed = 0
   let blackClickCharges = 0
   let colorClickCharges = 0
 
@@ -219,8 +220,8 @@ export function calculateTonerCosts(equipment: Equipment, month: number): number
     return 0
   }
 
-  // const yearsPassed = Math.floor((month - 1) / 12)
-  const yearsPassed = 0
+  const yearsPassed = Math.floor((month - 1) / 12)
+  // const yearsPassed = 0
   const {
     blackCostPerCartridge,
     colorCostPerCartridge,

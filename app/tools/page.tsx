@@ -78,7 +78,7 @@ export default function ToolsPage() {
           ))}
         </div>
 
-        <Card className="mt-12">
+        {/* <Card className="mt-12">
           <CardHeader>
             <CardTitle>Request a Tool</CardTitle>
           </CardHeader>
@@ -89,7 +89,7 @@ export default function ToolsPage() {
             </p>
             <Button variant="outline">Submit Tool Request</Button>
           </CardContent>
-        </Card>
+        </Card> */}
       </div>
     </div>
   )

@@ -8,10 +8,12 @@ import { AuthProvider } from "@/contexts/auth-context"
 const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
-  title: "Equipment Financial Analysis",
-  description: "Compare equipment cash flows and calculate financial metrics",
-    generator: 'v0.app'
-}
+  title: "upgrr - Equipment Comparison Calculator",
+  description: "Compare equipment options, analyze cash flows, and calculate financial metrics with ease.",
+  icons: {
+    icon: "/favicon.png", // supports .ico, .png, .svg
+  },
+};
 
 export default function RootLayout({
   children,

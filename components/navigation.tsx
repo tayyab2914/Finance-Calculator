@@ -1,6 +1,7 @@
 "use client"
 
 import Link from "next/link"
+import Image from "next/image"
 import { usePathname } from "next/navigation"
 import { useAuth } from "@/contexts/auth-context"
 import { cn } from "@/lib/utils"
@@ -13,6 +14,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { User, LogOut, Settings } from "lucide-react"
+import logo from "@/public/logo.png"
 
 export function Navigation() {
   const pathname = usePathname()
@@ -42,7 +44,7 @@ export function Navigation() {
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-16">
           <Link href={user ? "/dashboard" : "/"} className="font-bold text-xl text-blue-600">
-            FinAnalysis
+             <Image src={logo} alt="Logo" width={150} height={40} />
           </Link>
 
           <div className="flex items-center space-x-8">
