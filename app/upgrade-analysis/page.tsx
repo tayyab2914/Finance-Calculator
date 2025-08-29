@@ -96,6 +96,29 @@ export default function UpgradeAnalysisPage() {
   const [proposedEquipment, setProposedEquipment] = useState<Equipment[]>([])
   const [applyGrowthToAll, setApplyGrowthToAll] = useState(false)
 
+  function isEquipmentValid(equipment: Equipment): boolean {
+    // Black check
+    if (
+      (equipment.clickCharges?.black?.monthlyVolume ?? 0) > 0 &&
+      (!equipment.clickCharges?.black?.rate || equipment.clickCharges.black.rate <= 0)
+    ) {
+      return false
+    }
+
+    // Color check
+    if (
+      (equipment.clickCharges?.color?.monthlyVolume ?? 0) > 0 &&
+      (!equipment.clickCharges?.color?.rate || equipment.clickCharges.color.rate <= 0)
+    ) {
+      return false
+    }
+
+    return true
+  }
+  const areAllCurrentEquipmentsValid = currentEquipment.every(isEquipmentValid)
+const areAllProposedEquipmentsValid = proposedEquipment.every(isEquipmentValid)
+
+
   // Load user's default discount rate
   useEffect(() => {
     const loadUserDefaults = async () => {
@@ -178,18 +201,17 @@ export default function UpgradeAnalysisPage() {
 
         {/* Progress Steps */}
         <div className="mb-8">
-          <div className="flex items-center justify-center space-x-4">
+          <div className="flex items-center justify-center ">
             {[1, 2, 3, 4].map((stepNumber) => (
               <div key={stepNumber} className="flex items-center">
                 <div
-                  className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
-                    step >= stepNumber ? "bg-blue-600 text-white" : "bg-gray-200 text-gray-600"
-                  }`}
+                  className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${step >= stepNumber ? "bg-green-600 text-white" : "bg-gray-200 text-gray-600"
+                    }`}
                 >
                   {stepNumber}
                 </div>
                 {stepNumber < 4 && (
-                  <div className={`w-16 h-1 mx-2 ${step > stepNumber ? "bg-blue-600" : "bg-gray-200"}`} />
+                  <div className={`w-20 h-1 ${step > stepNumber ? "bg-green-600" : "bg-gray-200"}`} />
                 )}
               </div>
             ))}
@@ -244,7 +266,7 @@ export default function UpgradeAnalysisPage() {
                         index={index}
                         type="current"
                         applyGrowthToAll={applyGrowthToAll}
-                        setApplyGrowthToAll={setApplyGrowthToAll} 
+                        setApplyGrowthToAll={setApplyGrowthToAll}
                         onChange={(updates) => updateCurrentEquipment(equipment.id, updates)}
                         onRemove={() => removeCurrentEquipment(equipment.id)}
                         allCurrentEquipment={currentEquipment}
@@ -263,7 +285,7 @@ export default function UpgradeAnalysisPage() {
               <Button variant="outline" onClick={() => setStep(1)}>
                 Back
               </Button>
-              <Button onClick={() => setStep(3)} disabled={currentEquipment.length === 0}>
+              <Button onClick={() => setStep(3)}  disabled={currentEquipment.length === 0 || !areAllCurrentEquipmentsValid}>
                 Next: Proposed Equipment
               </Button>
             </div>
@@ -293,7 +315,7 @@ export default function UpgradeAnalysisPage() {
                         equipment={equipment}
                         index={index}
                         applyGrowthToAll={applyGrowthToAll}
-                        setApplyGrowthToAll={setApplyGrowthToAll} 
+                        setApplyGrowthToAll={setApplyGrowthToAll}
                         type="proposed"
                         onChange={(updates) => updateProposedEquipment(equipment.id, updates)}
                         onRemove={() => removeProposedEquipment(equipment.id)}
@@ -313,7 +335,7 @@ export default function UpgradeAnalysisPage() {
               <Button variant="outline" onClick={() => setStep(2)}>
                 Back
               </Button>
-              <Button onClick={() => setStep(4)} disabled={proposedEquipment.length === 0}>
+              <Button onClick={() => setStep(4)} disabled={proposedEquipment.length === 0 || !areAllProposedEquipmentsValid}>
                 Generate Analysis
               </Button>
             </div>

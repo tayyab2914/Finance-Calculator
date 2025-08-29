@@ -54,8 +54,8 @@ export function Navigation() {
                   key={item.href}
                   href={item.href}
                   className={cn(
-                    "text-gray-600 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium transition-colors",
-                    pathname === item.href && "text-blue-600 bg-blue-50",
+                    "text-gray-600 hover:text-black px-3 py-2 rounded-md text-sm font-medium transition-colors",
+                    pathname === item.href && "text-gray-600 bg-gray-100",
                   )}
                 >
                   {item.label}

@@ -1,12 +1,14 @@
 "use client"
 
+import type React from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Button } from "@/components/ui/button"
-import { Trash2, ChevronDown, ChevronRight } from "lucide-react"
+import { Trash2, ChevronDown, ChevronRight, Info } from "lucide-react"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 import type { Equipment } from "@/app/upgrade-analysis/page"
 import { useEffect, useState } from "react"
@@ -38,6 +40,7 @@ export function EquipmentForm({
   const [sellingPrice, setSellingPrice] = useState<number>(equipment.sellingPrice || 0)
   const [rentalAmount, setRentalAmount] = useState<number>(0)
   const [showLeaseCalculation, setShowLeaseCalculation] = useState(false)
+
 
   useEffect(() => {
     if (equipment.cashPrice !== undefined && equipment.settlement !== undefined) {
@@ -412,6 +415,7 @@ export function EquipmentForm({
                     value={equipment.leaseDetails?.monthlyAmount || ""}
                     onChange={(e) => updateLeaseDetails("monthlyAmount", e.target.value)}
                     placeholder="0.00"
+                    readOnly={showLeaseCalculation}
                   />
                 </div>
                 <div className="space-y-2">
@@ -462,14 +466,26 @@ export function EquipmentForm({
               </div>
               {equipment.leaseDetails?.evergreenRental && (
                 <div className="space-y-2">
-                  <Label>Reduced Rate %</Label>
+                  <div className="flex items-center gap-2">
+                    <Label>Reduced Rate %</Label>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Info className="w-4 h-4 text-muted-foreground cursor-pointer" />
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>If the lease/rental reduces by 20%, enter 80%</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </div>
                   <Input
                     type="number"
                     value={equipment.leaseDetails?.reducedRate || ""}
                     onChange={(e) => updateLeaseDetails("reducedRate", e.target.value)}
                     placeholder="0.00"
                   />
-                  <p className="text-sm text-muted-foreground">If the lease/rental reduces by 20%, enter 80%</p>
+                  {/* <p className="text-sm text-muted-foreground">If the lease/rental reduces by 20%, enter 80%</p> */}
                 </div>
               )}
             </CardContent>
@@ -544,14 +560,17 @@ export function EquipmentForm({
             )}
 
             {index === 0 && type === "current" && (
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  checked={applyGrowthToAll}
-                  onCheckedChange={(checked) => setApplyGrowthToAll(!!checked)}
-                />
-                <Label >
-                  Apply Growth % to all equipments
-                </Label>
+              <div className="grid gap-4 md:grid-cols-2">
+                <div></div>
+                <div className="flex items-center row-re space-x-2">
+                  <Checkbox
+                    checked={applyGrowthToAll}
+                    onCheckedChange={(checked) => setApplyGrowthToAll(!!checked)}
+                  />
+                  <Label >
+                    Apply these volume growth percentages globally
+                  </Label>
+                </div>
               </div>
             )}
 
@@ -563,36 +582,76 @@ export function EquipmentForm({
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-2 text-sm">
-                    <div className="grid grid-cols-3 gap-4 font-medium">
+                    {/* Table Header */}
+                    <div className="grid grid-cols-4 gap-4 font-medium">
                       <span>Type</span>
                       <span>Current Total</span>
                       <span>Proposed Total</span>
+                      <span>Difference</span>
                     </div>
-                    <div className="grid grid-cols-3 gap-4">
+
+                    {/* Black Volume Row */}
+                    <div className="grid grid-cols-4 gap-4">
                       <span>Black Volume</span>
                       <span>{currentTotals.black.toLocaleString()}</span>
                       <span
-                        className={proposedTotals.black !== currentTotals.black ? "text-orange-600 font-medium" : ""}
+                        className={
+                          proposedTotals.black !== currentTotals.black
+                            ? "text-orange-600 font-medium"
+                            : ""
+                        }
                       >
                         {proposedTotals.black.toLocaleString()}
                       </span>
+                      <span
+                        className={
+                          proposedTotals.black - currentTotals.black !== 0
+                            ? "text-orange-600 font-medium"
+                            : ""
+                        }
+                      >
+                        {Math.abs(proposedTotals.black - currentTotals.black).toLocaleString()}
+
+                      </span>
                     </div>
-                    <div className="grid grid-cols-3 gap-4">
+
+                    {/* Color Volume Row */}
+                    <div className="grid grid-cols-4 gap-4">
                       <span>Color Volume</span>
                       <span>{currentTotals.color.toLocaleString()}</span>
                       <span
-                        className={proposedTotals.color !== currentTotals.color ? "text-orange-600 font-medium" : ""}
+                        className={
+                          proposedTotals.color !== currentTotals.color
+                            ? "text-orange-600 font-medium"
+                            : ""
+                        }
                       >
                         {proposedTotals.color.toLocaleString()}
                       </span>
+                      <span
+                        className={
+                          proposedTotals.color - currentTotals.color !== 0
+                            ? "text-orange-600 font-medium"
+                            : ""
+                        }
+                      >
+                        {Math.abs(proposedTotals.color - currentTotals.color).toLocaleString()}
+
+                      </span>
                     </div>
-                    {(proposedTotals.black !== currentTotals.black || proposedTotals.color !== currentTotals.color) && (
-                      <p className="text-orange-600 text-xs mt-2">⚠️ Proposed volumes don't match current volumes</p>
-                    )}
+
+                    {/* Warning Message */}
+                    {(proposedTotals.black !== currentTotals.black ||
+                      proposedTotals.color !== currentTotals.color) && (
+                        <p className="text-orange-600 text-xs mt-2">
+                          ⚠️ Proposed volumes don't match current volumes
+                        </p>
+                      )}
                   </div>
                 </CardContent>
               </Card>
             )}
+
           </CardContent>
         </Card>
 
@@ -618,7 +677,7 @@ export function EquipmentForm({
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label>Click Rate Escalation % (Annual)</Label>
+                    <Label>Black Click Rate Escalation % (Annual)</Label>
                     <Input
                       type="number"
                       value={equipment.clickCharges?.black?.escalationPercent || ""}
@@ -645,7 +704,7 @@ export function EquipmentForm({
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label>Click Rate Escalation % (Annual)</Label>
+                      <Label>Color Click Rate Escalation % (Annual)</Label>
                       <Input
                         type="number"
                         value={equipment.clickCharges?.color?.escalationPercent || ""}
@@ -767,7 +826,20 @@ export function EquipmentForm({
         {/* Proposed Equipment Savings */}
         {type === "proposed" && (
           <div className="space-y-2">
-            <Label>Savings per Month (if applicable)</Label>
+            <div className="flex">
+              <Label>Savings per Month (if applicable)</Label>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Info className="w-4 h-4 ml-2 text-muted-foreground cursor-pointer" />
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>If there are any additional savings that are attributable to this machine, they should be listed here eg. if one can put a value on time saved by an operator etc.</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </div>
+
             <Input
               type="number"
               value={equipment.savingsPerMonth || ""}

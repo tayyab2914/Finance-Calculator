@@ -154,7 +154,7 @@ function DashboardContent() {
             <CardDescription>Your saved analyses</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-blue-600">{analyses.length}</div>
+            <div className="text-3xl font-bold text-green-600">{analyses.length}</div>
           </CardContent>
         </Card>
 
@@ -287,10 +287,10 @@ function DashboardContent() {
                         </Badge>
                       </td>
                       <td className="py-3 px-2 text-center">
-                        <span className="text-sm font-medium text-red-600">{analysis.current_equipment.length}</span>
+                        <span className="text-sm font-medium text-gray-600">{analysis.current_equipment.length}</span>
                       </td>
                       <td className="py-3 px-2 text-center">
-                        <span className="text-sm font-medium text-blue-600">{analysis.proposed_equipment.length}</span>
+                        <span className="text-sm font-medium text-gray-600">{analysis.proposed_equipment.length}</span>
                       </td>
                       <td className="py-3 px-2">
                         <div className="text-sm text-gray-600">

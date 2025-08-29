@@ -8,7 +8,7 @@ import { AuthProvider } from "@/contexts/auth-context"
 const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
-  title: "upgrr - Equipment Comparison Calculator",
+  title: "Upgrr - Equipment Comparison Calculator",
   description: "Compare equipment options, analyze cash flows, and calculate financial metrics with ease.",
   icons: {
     icon: "/favicon.png", // supports .ico, .png, .svg

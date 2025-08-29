@@ -51,7 +51,7 @@ export function ClientDetailsForm({ details, onChange }: ClientDetailsFormProps)
         <h3 className="text-lg font-medium text-gray-900 mb-4">Contact Details</h3>
         <div className="grid gap-6 md:grid-cols-2">
           <div className="space-y-2">
-            <Label htmlFor="contactPersonName">Contact Person Name</Label>
+            <Label htmlFor="contactPersonName">Contact Person Full Name</Label>
             <Input
               id="contactPersonName"
               value={details.contactPersonName || ""}
@@ -71,19 +71,7 @@ export function ClientDetailsForm({ details, onChange }: ClientDetailsFormProps)
           </div>
         </div>
 
-        <div className="grid gap-6 md:grid-cols-2 mt-4">
-          
-          <div className="space-y-2">
-            <Label htmlFor="contactAddress">Company Address</Label>
-            <Textarea
-              id="contactAddress"
-              value={details.contactAddress || ""}
-              onChange={(e) => onChange({ ...details, contactAddress: e.target.value })}
-              placeholder="Enter contact address"
-              rows={3}
-            />
-          </div>
-        </div>
+      
       </div>
     </div>
   )
