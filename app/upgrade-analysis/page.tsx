@@ -116,7 +116,7 @@ export default function UpgradeAnalysisPage() {
     return true
   }
   const areAllCurrentEquipmentsValid = currentEquipment.every(isEquipmentValid)
-const areAllProposedEquipmentsValid = proposedEquipment.every(isEquipmentValid)
+  const areAllProposedEquipmentsValid = proposedEquipment.every(isEquipmentValid)
 
 
   // Load user's default discount rate
@@ -285,7 +285,7 @@ const areAllProposedEquipmentsValid = proposedEquipment.every(isEquipmentValid)
               <Button variant="outline" onClick={() => setStep(1)}>
                 Back
               </Button>
-              <Button onClick={() => setStep(3)}  disabled={currentEquipment.length === 0 || !areAllCurrentEquipmentsValid}>
+              <Button onClick={() => setStep(3)} disabled={currentEquipment.length === 0 || !areAllCurrentEquipmentsValid}>
                 Next: Proposed Equipment
               </Button>
             </div>
