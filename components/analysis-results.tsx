@@ -15,6 +15,7 @@ import {
   BarChart,
   Bar,
 } from "recharts"
+import { Tooltip as UiTooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Input } from "@/components/ui/input"
@@ -33,6 +34,7 @@ import {
   Building2,
   User,
   MapPin,
+  Info,
 } from "lucide-react"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 import { Alert, AlertDescription } from "@/components/ui/alert"
@@ -651,9 +653,23 @@ export function AnalysisResults({
 
             {/* Discount Rate */}
             <div>
-              <Label htmlFor="discountRate" className="block text-sm font-medium text-gray-700">
-                Discount Rate (Annual %)
-              </Label>
+              <div className="flex">
+                <Label htmlFor="discountRate" className="block text-sm font-medium text-gray-700">
+                  Discount Rate (Annual %)
+                </Label>
+                <div className="ml-2">
+                  <TooltipProvider>
+                    <UiTooltip>
+                      <TooltipTrigger asChild>
+                        <Info className="w-4 h-4 text-muted-foreground cursor-pointer" />
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>This rate is usually the ruling CPI inflation rate. Another percentage that can be used is the User's Internal Cost of Capital rate</p>
+                      </TooltipContent>
+                    </UiTooltip>
+                  </TooltipProvider>
+                </div>
+              </div>
               <div className="flex gap-2">
                 <Select
                   value={customDiscountRate ? "custom" : discountRateAnnual.toString()}
@@ -742,7 +758,7 @@ export function AnalysisResults({
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>Equipment Cash Flow Details</CardTitle>
-          <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 w-full">
+          <div className="flex flex-col sm:flex-row sm:items-center">
             <Select
               value={viewMode}
               onValueChange={(value: "individual" | "totals") => setViewMode(value)}

@@ -42,13 +42,13 @@ export interface Equipment {
     black: {
       rate: number
       monthlyVolume: number
-      growthPercent: number
+      growthPercent: string
       escalationPercent: number
     }
     color?: {
       rate: number
       monthlyVolume: number
-      growthPercent: number
+      growthPercent: string
       escalationPercent: number
     }
   }
@@ -60,8 +60,8 @@ export interface Equipment {
     numberOfColorCartridges?: number
     blackYieldPerUnit: number
     colorYieldPerUnit?: number
-    blackVolumeGrowthPercent?: number
-    colorVolumeGrowthPercent?: number
+    blackVolumeGrowthPercent?: string
+    colorVolumeGrowthPercent?: string
     blackCostEscalationPercent?: number
     colorCostEscalationPercent?: number
     escalationPercent?: number // Keep for backward compatibility
@@ -86,7 +86,7 @@ export default function UpgradeAnalysisPage() {
   const { user } = useAuth()
   const [step, setStep] = useState(1)
   const [defaultDiscountRate, setDefaultDiscountRate] = useState(8)
-  const [currencySymbol, setCurrencySymbol] = useState('$')
+  const [currencySymbol, setCurrencySymbol] = useState("$")
   const [clientDetails, setClientDetails] = useState<ClientDetails>({
     companyName: "",
     email: "",
@@ -118,7 +118,6 @@ export default function UpgradeAnalysisPage() {
   const areAllCurrentEquipmentsValid = currentEquipment.every(isEquipmentValid)
   const areAllProposedEquipmentsValid = proposedEquipment.every(isEquipmentValid)
 
-
   // Load user's default discount rate
   useEffect(() => {
     const loadUserDefaults = async () => {
@@ -126,7 +125,7 @@ export default function UpgradeAnalysisPage() {
         try {
           const profile = await getUserProfile()
           setDefaultDiscountRate(profile.default_discount_rate || 8)
-          setCurrencySymbol(profile.currency_symbol || '$')
+          setCurrencySymbol(profile.currency_symbol || "$")
         } catch (error) {
           console.error("Failed to load user profile:", error)
         }
@@ -135,52 +134,232 @@ export default function UpgradeAnalysisPage() {
     loadUserDefaults()
   }, [user])
 
-  const addCurrentEquipment = () => {
-    const newEquipment: Equipment = {
-      id: Date.now().toString(),
-      brand: "",
-      model: "",
-      location: "",
-      type: "color",
-      ownership: "lease",
-      copyBasedService: true,
-      leaseDetails: {
-        monthlyAmount: 0,
-        annualEscalation: 0,
-        monthsRemaining: 0,
-        paymentFrequency: "monthly",
-        evergreenRental: false,
-      },
-    }
-    setCurrentEquipment([...currentEquipment, newEquipment])
-  }
+  const syncGrowthPercentages = (firstEquipmentId: string, blackGrowth: string, colorGrowth: string) => {
+    if (!applyGrowthToAll) return
 
-  const addProposedEquipment = () => {
-    const newEquipment: Equipment = {
-      id: Date.now().toString(),
-      brand: "",
-      model: "",
-      location: "",
-      type: "color",
-      ownership: "lease",
-      copyBasedService: true,
-      leaseDetails: {
-        monthlyAmount: 0,
-        annualEscalation: 0,
-        monthsRemaining: 0,
-        paymentFrequency: "monthly",
-        evergreenRental: false,
-      },
-    }
-    setProposedEquipment([...proposedEquipment, newEquipment])
+    // Update all current equipment (except the first one)
+    setCurrentEquipment((prev) =>
+      prev.map((eq, index) => {
+        if (index === 0 || eq.id === firstEquipmentId) return eq
+
+        const updates: Partial<Equipment> = {}
+
+        // Update click charges growth
+        if (eq.clickCharges) {
+          updates.clickCharges = {
+            ...eq.clickCharges,
+            black: {
+              ...eq.clickCharges.black,
+              growthPercent: blackGrowth,
+            },
+          }
+
+          if (eq.type === "color" && eq.clickCharges.color) {
+            updates.clickCharges.color = {
+              ...eq.clickCharges.color,
+              growthPercent: colorGrowth,
+            }
+          }
+        }
+
+        // Update toner costs growth
+        if (eq.tonerCosts) {
+          updates.tonerCosts = {
+            ...eq.tonerCosts,
+            blackVolumeGrowthPercent: blackGrowth,
+          }
+
+          if (eq.type === "color") {
+            updates.tonerCosts.colorVolumeGrowthPercent = colorGrowth
+          }
+        }
+
+        return { ...eq, ...updates }
+      }),
+    )
+
+    // Update all proposed equipment
+    setProposedEquipment((prev) =>
+      prev.map((eq) => {
+        const updates: Partial<Equipment> = {}
+
+        // Update click charges growth
+        if (eq.clickCharges) {
+          updates.clickCharges = {
+            ...eq.clickCharges,
+            black: {
+              ...eq.clickCharges.black,
+              growthPercent: blackGrowth,
+            },
+          }
+
+          if (eq.type === "color" && eq.clickCharges.color) {
+            updates.clickCharges.color = {
+              ...eq.clickCharges.color,
+              growthPercent: colorGrowth,
+            }
+          }
+        }
+
+        // Update toner costs growth
+        if (eq.tonerCosts) {
+          updates.tonerCosts = {
+            ...eq.tonerCosts,
+            blackVolumeGrowthPercent: blackGrowth,
+          }
+
+          if (eq.type === "color") {
+            updates.tonerCosts.colorVolumeGrowthPercent = colorGrowth
+          }
+        }
+
+        return { ...eq, ...updates }
+      }),
+    )
   }
 
   const updateCurrentEquipment = (id: string, updates: Partial<Equipment>) => {
-    setCurrentEquipment((prev) => prev.map((eq) => (eq.id === id ? { ...eq, ...updates } : eq)))
+    setCurrentEquipment((prev) => {
+      const updatedEquipment = prev.map((eq) => (eq.id === id ? { ...eq, ...updates } : eq))
+
+      const equipmentIndex = prev.findIndex((eq) => eq.id === id)
+      if (equipmentIndex === 0 && applyGrowthToAll) {
+        const updatedEq = updatedEquipment[0]
+        const blackGrowth =
+          updates.clickCharges?.black?.growthPercent ??
+          updates.tonerCosts?.blackVolumeGrowthPercent ??
+          updatedEq.clickCharges?.black?.growthPercent ??
+          updatedEq.tonerCosts?.blackVolumeGrowthPercent ??
+          ""
+
+        const colorGrowth =
+          updates.clickCharges?.color?.growthPercent ??
+          updates.tonerCosts?.colorVolumeGrowthPercent ??
+          updatedEq.clickCharges?.color?.growthPercent ??
+          updatedEq.tonerCosts?.colorVolumeGrowthPercent ??
+          ""
+
+        // Sync growth percentages if they were updated
+        if (
+          updates.clickCharges?.black?.growthPercent !== undefined ||
+          updates.clickCharges?.color?.growthPercent !== undefined ||
+          updates.tonerCosts?.blackVolumeGrowthPercent !== undefined ||
+          updates.tonerCosts?.colorVolumeGrowthPercent !== undefined
+        ) {
+          setTimeout(() => syncGrowthPercentages(id, blackGrowth, colorGrowth), 0)
+        }
+      }
+
+      return updatedEquipment
+    })
   }
 
   const updateProposedEquipment = (id: string, updates: Partial<Equipment>) => {
     setProposedEquipment((prev) => prev.map((eq) => (eq.id === id ? { ...eq, ...updates } : eq)))
+  }
+
+  const addCurrentEquipment = () => {
+    const firstEquipment = currentEquipment[0]
+    const newEquipment: Equipment = {
+      id: Date.now().toString(),
+      brand: "",
+      model: "",
+      location: "",
+      type: "color",
+      ownership: "lease",
+      copyBasedService: true,
+      leaseDetails: {
+        monthlyAmount: 0,
+        annualEscalation: 0,
+        monthsRemaining: 0,
+        paymentFrequency: "monthly",
+        evergreenRental: false,
+      },
+    }
+
+    // Apply first equipment's growth percentages if sync is enabled
+    if (firstEquipment) {
+      const blackGrowth =
+        firstEquipment.clickCharges?.black?.growthPercent ?? firstEquipment.tonerCosts?.blackVolumeGrowthPercent ?? ""
+      const colorGrowth =
+        firstEquipment.clickCharges?.color?.growthPercent ?? firstEquipment.tonerCosts?.colorVolumeGrowthPercent ?? ""
+
+      if (newEquipment.copyBasedService) {
+        newEquipment.clickCharges = {
+          black: { rate: 0, monthlyVolume: 0, growthPercent: blackGrowth, escalationPercent: 0 },
+          color: { rate: 0, monthlyVolume: 0, growthPercent: colorGrowth, escalationPercent: 0 },
+        }
+      } else {
+        newEquipment.tonerCosts = {
+          blackMonthlyVolume: 0,
+          colorMonthlyVolume: 0,
+          blackCostPerCartridge: 0,
+          colorCostPerCartridge: 0,
+          blackYieldPerUnit: 0,
+          colorYieldPerUnit: 0,
+          blackVolumeGrowthPercent: blackGrowth,
+          colorVolumeGrowthPercent: colorGrowth,
+          blackCostEscalationPercent: 0,
+          colorCostEscalationPercent: 0,
+        }
+      }
+    }
+
+    setCurrentEquipment([...currentEquipment, newEquipment])
+  }
+
+  const addProposedEquipment = () => {
+    const firstCurrentEquipment = currentEquipment[0]
+    const newEquipment: Equipment = {
+      id: Date.now().toString(),
+      brand: "",
+      model: "",
+      location: "",
+      type: "color",
+      ownership: "lease",
+      copyBasedService: true,
+      leaseDetails: {
+        monthlyAmount: 0,
+        annualEscalation: 0,
+        monthsRemaining: 0,
+        paymentFrequency: "monthly",
+        evergreenRental: false,
+      },
+    }
+
+    // Apply first current equipment's growth percentages if sync is enabled
+    if (firstCurrentEquipment) {
+      const blackGrowth =
+        firstCurrentEquipment.clickCharges?.black?.growthPercent ??
+        firstCurrentEquipment.tonerCosts?.blackVolumeGrowthPercent ??
+        ""
+      const colorGrowth =
+        firstCurrentEquipment.clickCharges?.color?.growthPercent ??
+        firstCurrentEquipment.tonerCosts?.colorVolumeGrowthPercent ??
+        ""
+
+      if (newEquipment.copyBasedService) {
+        newEquipment.clickCharges = {
+          black: { rate: 0, monthlyVolume: 0, growthPercent: blackGrowth, escalationPercent: 0 },
+          color: { rate: 0, monthlyVolume: 0, growthPercent: colorGrowth, escalationPercent: 0 },
+        }
+      } else {
+        newEquipment.tonerCosts = {
+          blackMonthlyVolume: 0,
+          colorMonthlyVolume: 0,
+          blackCostPerCartridge: 0,
+          colorCostPerCartridge: 0,
+          blackYieldPerUnit: 0,
+          colorYieldPerUnit: 0,
+          blackVolumeGrowthPercent: blackGrowth,
+          colorVolumeGrowthPercent: colorGrowth,
+          blackCostEscalationPercent: 0,
+          colorCostEscalationPercent: 0,
+        }
+      }
+    }
+
+    setProposedEquipment([...proposedEquipment, newEquipment])
   }
 
   const removeCurrentEquipment = (id: string) => {
@@ -205,14 +384,13 @@ export default function UpgradeAnalysisPage() {
             {[1, 2, 3, 4].map((stepNumber) => (
               <div key={stepNumber} className="flex items-center">
                 <div
-                  className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${step >= stepNumber ? "bg-green-600 text-white" : "bg-gray-200 text-gray-600"
-                    }`}
+                  className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
+                    step >= stepNumber ? "bg-green-600 text-white" : "bg-gray-200 text-gray-600"
+                  }`}
                 >
                   {stepNumber}
                 </div>
-                {stepNumber < 4 && (
-                  <div className={`w-20 h-1 ${step > stepNumber ? "bg-green-600" : "bg-gray-200"}`} />
-                )}
+                {stepNumber < 4 && <div className={`w-20 h-1 ${step > stepNumber ? "bg-green-600" : "bg-gray-200"}`} />}
               </div>
             ))}
           </div>
@@ -285,7 +463,10 @@ export default function UpgradeAnalysisPage() {
               <Button variant="outline" onClick={() => setStep(1)}>
                 Back
               </Button>
-              <Button onClick={() => setStep(3)} disabled={currentEquipment.length === 0 || !areAllCurrentEquipmentsValid}>
+              <Button
+                onClick={() => setStep(3)}
+                disabled={currentEquipment.length === 0 || !areAllCurrentEquipmentsValid}
+              >
                 Next: Proposed Equipment
               </Button>
             </div>
@@ -335,7 +516,10 @@ export default function UpgradeAnalysisPage() {
               <Button variant="outline" onClick={() => setStep(2)}>
                 Back
               </Button>
-              <Button onClick={() => setStep(4)} disabled={proposedEquipment.length === 0 || !areAllProposedEquipmentsValid}>
+              <Button
+                onClick={() => setStep(4)}
+                disabled={proposedEquipment.length === 0 || !areAllProposedEquipmentsValid}
+              >
                 Generate Analysis
               </Button>
             </div>
