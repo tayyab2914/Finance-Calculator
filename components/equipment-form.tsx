@@ -507,7 +507,7 @@ export function EquipmentForm({
                   <Input
                     type="number"
                     value={getUnifiedVolume("black", "volume")}
-                    onChange={(e) => updateUnifiedVolume("black", "volume", Number.parseInt(e.target.value) || 0)}
+                    onChange={(e) => updateUnifiedVolume("black", "volume", e.target.value)}
                     placeholder="0"
                   />
                 </div>
@@ -537,7 +537,7 @@ export function EquipmentForm({
                     <Input
                       type="number"
                       value={getUnifiedVolume("color", "volume")}
-                      onChange={(e) => updateUnifiedVolume("color", "volume", Number.parseInt(e.target.value) || 0)}
+                      onChange={(e) => updateUnifiedVolume("color", "volume", e.target.value)}
                       placeholder="0"
                     />
                   </div>
@@ -550,8 +550,8 @@ export function EquipmentForm({
                       onChange={(e) => updateUnifiedVolume("color", "growth", e.target.value)}
                       placeholder="0.00"
                       readOnly={
-                        (type === "current" && applyGrowthToAll && index > 0) ||
-                        (type === "proposed" && applyGrowthToAll)
+                        (type === "current" && applyGrowthToAll && index > 0 && allCurrentEquipment[0]?.type === "color") ||
+                        (type === "proposed" && applyGrowthToAll && allCurrentEquipment[0]?.type === "color")
                       }
                     />
                   </div>

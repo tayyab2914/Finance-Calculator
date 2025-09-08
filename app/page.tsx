@@ -26,11 +26,11 @@ export default function HomePage() {
               🚀 Beta Version - Early Access
             </div>
             <h1 className="text-5xl lg:text-6xl font-bold text-foreground mb-6 text-balance animate-fade-in-up animation-delay-200">
-              Equipment Upgrade Decisions, <span className="text-primary animate-float">Simplified</span>
+              Printer Upgrade Decisions, <span className="text-primary animate-float">Simplified</span>
             </h1>
             <p className="text-xl text-muted-foreground max-w-3xl mx-auto mb-8 leading-relaxed animate-fade-in-up animation-delay-400">
-              Powerful financial tools designed for equipment suppliers and users. Make smarter decisions, close more
-              deals, and maximize your ROI with data-driven insights.
+              Powerful financial tools that reveal the true cost of upgrading—or not upgrading—digital printing equipment,
+               helping users decide with confidence and enabling sales consultants to win more business.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-12 animate-fade-in-up animation-delay-600">
               <Button

@@ -30,6 +30,7 @@ function ProfileContent() {
   const [companyAddress, setCompanyAddress] = useState("")
   const [companyPhone, setCompanyPhone] = useState("")
   const [defaultDiscountRate, setDefaultDiscountRate] = useState(8)
+  const [defaultDiscountRateInput, setDefaultDiscountRateInput] = useState("8")
   const [currencySymbol, setCurrencySymbol] = useState("$")
   const [companyLogoUrl, setCompanyLogoUrl] = useState("")
   const [loading, setLoading] = useState(true)
@@ -52,8 +53,10 @@ function ProfileContent() {
       setCompanyAddress(profile.company_address || "")
       setCompanyPhone(profile.company_phone || "")
       setDefaultDiscountRate(profile.default_discount_rate || 8)
+      setDefaultDiscountRateInput(String(profile.default_discount_rate || 8))
       setCurrencySymbol(profile.currency_symbol || "$")
-      setCompanyLogoUrl(profile.company_logo_url || "")
+      setCompanyLogoUrl(profile.company_logo_url ? `${profile.company_logo_url}?t=${Date.now()}` : "")
+      // setCompanyLogoUrl(profile.company_logo_url || "")
     } catch (error) {
       setError(error instanceof Error ? error.message : "Failed to load profile")
     } finally {
@@ -106,7 +109,8 @@ function ProfileContent() {
 
     try {
       const logoUrl = await uploadCompanyLogo(file)
-      setCompanyLogoUrl(logoUrl)
+       setCompanyLogoUrl(`${logoUrl}?t=${Date.now()}`)
+      // setCompanyLogoUrl(logoUrl)
       setSuccess("Company logo uploaded successfully!")
     } catch (error) {
       setError(error instanceof Error ? error.message : "Failed to upload logo")
@@ -136,7 +140,7 @@ function ProfileContent() {
       </div>
 
       <div className="max-w-4xl space-y-6">
-                {/* Company Logo */}
+        {/* Company Logo */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -150,6 +154,7 @@ function ProfileContent() {
               {companyLogoUrl && (
                 <div className="flex items-center gap-4">
                   <img
+                    // src="https://eglsuheshgtkuieitino.supabase.co/storage/v1/object/public/company-logos/a3196fc5-fbfe-4349-905e-a29152e757b4/logo.jpg"
                     src={companyLogoUrl || "/placeholder.svg"}
                     alt="Company Logo"
                     className="w-16 h-16 object-contain border rounded-lg"
@@ -269,51 +274,63 @@ function ProfileContent() {
                 />
               </div>
 
-              
-        {/* Report Settings */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Report Settings</CardTitle>
-            <CardDescription>Configure default settings for your financial reports.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="grid gap-6 md:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="defaultDiscountRate">Default Discount Rate (%)</Label>
-                <Input
-                  id="defaultDiscountRate"
-                  type="number"
-                  step="0.1"
-                  min="0"
-                  max="100"
-                  value={defaultDiscountRate}
-                  onChange={(e) => setDefaultDiscountRate(Number.parseFloat(e.target.value) || 8)}
-                  placeholder="8.0"
-                />
-                <p className="text-sm text-gray-500">This rate will be used as default for new analyses</p>
-              </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="currencySymbol">Currency Symbol</Label>
-                <Select value={currencySymbol} onValueChange={setCurrencySymbol}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="$">$ (USD)</SelectItem>
-                    <SelectItem value="€">€ (EUR)</SelectItem>
-                    <SelectItem value="£">£ (GBP)</SelectItem>
-                    <SelectItem value="¥">¥ (JPY)</SelectItem>
-                    <SelectItem value="₹">₹ (INR)</SelectItem>
-                    <SelectItem value="C$">C$ (CAD)</SelectItem>
-                    <SelectItem value="A$">A$ (AUD)</SelectItem>
-                  </SelectContent>
-                </Select>
-                <p className="text-sm text-gray-500">Currency symbol used in reports and analyses</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+              {/* Report Settings */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Report Settings</CardTitle>
+                  <CardDescription>Configure default settings for your financial reports.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid gap-6 md:grid-cols-2">
+                    <div className="space-y-2">
+                      <Label htmlFor="defaultDiscountRate">Default Discount Rate (%)</Label>
+                      <Input
+                        id="defaultDiscountRate"
+                        type="number"
+                        step="0.1"
+                        min="0"
+                        max="100"
+                        value={defaultDiscountRateInput}
+                        onChange={(e) => setDefaultDiscountRateInput(e.target.value)}
+                        onBlur={() => {
+                          const parsed = parseFloat(defaultDiscountRateInput)
+                          if (!isNaN(parsed)) {
+                            setDefaultDiscountRate(parsed)
+                            setDefaultDiscountRateInput(String(parsed))
+                          } else {
+                            // fallback if empty or invalid
+                            setDefaultDiscountRate(8)
+                            setDefaultDiscountRateInput("8")
+                          }
+                        }}
+                        placeholder="8.0"
+                      />
+                      <p className="text-sm text-gray-500">This rate will be used as default for new analyses</p>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="currencySymbol">Currency Symbol</Label>
+                      <Select value={currencySymbol} onValueChange={setCurrencySymbol}>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="$">$ (USD)</SelectItem>
+                          <SelectItem value="€">€ (EUR)</SelectItem>
+                          <SelectItem value="£">£ (GBP)</SelectItem>
+                          <SelectItem value="¥">¥ (JPY)</SelectItem>
+                          <SelectItem value="₹">₹ (INR)</SelectItem>
+                          <SelectItem value="C$">C$ (CAD)</SelectItem>
+                          <SelectItem value="A$">A$ (AUD)</SelectItem>
+                          <SelectItem value="R">R (ZAR)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <p className="text-sm text-gray-500">Currency symbol used in reports and analyses</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
 
               <div className="flex justify-end">
                 <Button type="submit" disabled={saving}>
@@ -324,7 +341,7 @@ function ProfileContent() {
             </form>
           </CardContent>
 
-          
+
         </Card>
 
 
@@ -343,10 +360,10 @@ function ProfileContent() {
                 <span className="font-medium">
                   {user?.created_at
                     ? new Date(user.created_at).toLocaleDateString("en-US", {
-                        year: "numeric",
-                        month: "long",
-                        day: "numeric",
-                      })
+                      year: "numeric",
+                      month: "long",
+                      day: "numeric",
+                    })
                     : "Unknown"}
                 </span>
               </div>
@@ -355,10 +372,10 @@ function ProfileContent() {
                 <span className="font-medium">
                   {user?.last_sign_in_at
                     ? new Date(user.last_sign_in_at).toLocaleDateString("en-US", {
-                        year: "numeric",
-                        month: "long",
-                        day: "numeric",
-                      })
+                      year: "numeric",
+                      month: "long",
+                      day: "numeric",
+                    })
                     : "Unknown"}
                 </span>
               </div>

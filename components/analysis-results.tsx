@@ -101,7 +101,7 @@ export function AnalysisResults({
   const { user } = useAuth()
   const [analysisYears, setAnalysisYears] = useState<number>(initialAnalysisYears)
   const [discountRateAnnual, setDiscountRateAnnual] = useState<number>(initialDiscountRate)
-  const [customDiscountRate, setCustomDiscountRate] = useState<string>("")
+  const [customDiscountRate, setCustomDiscountRate] = useState<string>("custom")
   const [customAnalysisYear, setCustomAnalysisYear] = useState<string>("")
   const [openEquipment, setOpenEquipment] = useState<string[]>([])
   const [viewMode, setViewMode] = useState<"individual" | "totals">("individual")
@@ -670,37 +670,15 @@ export function AnalysisResults({
                   </TooltipProvider>
                 </div>
               </div>
-              <div className="flex gap-2">
-                <Select
-                  value={customDiscountRate ? "custom" : discountRateAnnual.toString()}
-                  onValueChange={handleDiscountRateChange}
-                  disabled={readOnly}
-                >
-                  <SelectTrigger className="w-[150px]">
-                    <SelectValue placeholder="Select rate" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {selectOptions.map((rate) => (
-                      <SelectItem key={rate} value={rate}>
-                        {rate}%
-                      </SelectItem>
-                    ))}
-                    <SelectItem value="custom">Custom</SelectItem>
-                  </SelectContent>
-                </Select>
-
-                {(customDiscountRate || discountRateAnnual.toString() === "custom") && (
-                  <Input
-                    type="number"
-                    step="0.1"
-                    placeholder="Enter %"
-                    value={customDiscountRate || discountRateAnnual}
-                    onChange={(e) => handleCustomDiscountRateChange(e.target.value)}
-                    className="w-[100px]"
-                    disabled={readOnly}
-                  />
-                )}
-              </div>
+              <Input
+                type="number"
+                step="0.1"
+                placeholder="Enter discount rate %"
+                value={discountRateAnnual === 0 ? "" : discountRateAnnual}
+                onChange={(e) => setDiscountRateAnnual(Number.parseFloat(e.target.value) || 0)}
+                className="w-[200px]"
+                disabled={readOnly}
+              />
             </div>
           </div>
         </CardContent>
@@ -750,6 +728,93 @@ export function AnalysisResults({
               })}
             </div>
             <p className="text-sm text-gray-600 mt-1">{analysisData.npvSavings >= 0 ? "Savings" : "Additional cost"}</p>
+          </CardContent>
+        </Card>
+      </div>
+
+       {/* Summary Cards */}
+      <div className="grid gap-6 md:grid-cols-3">
+        <Card>
+          <CardHeader>
+            <CardTitle>{analysisYears}-Year Total Costs</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <div className="flex justify-between items-center">
+                <span className="text-gray-600">Current Equipment:</span>
+                <span className="font-semibold text-red-600">
+                  {currencySymbol}
+                  {analysisData.totalCurrentCost.toLocaleString("en-US", {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                  })}
+                </span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-gray-600">Proposed Equipment:</span>
+                <span className="font-semibold text-blue-600">
+                  {currencySymbol}
+                  {analysisData.totalProposedCost.toLocaleString("en-US", {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                  })}
+                </span>
+              </div>
+              <div className="border-t pt-2">
+                <div className="flex justify-between items-center">
+                  <span className="font-medium">Total Savings:</span>
+                  <span
+                    className={`font-bold ${(analysisData.totalCurrentCost - analysisData.totalProposedCost) >= 0 ? "text-green-600" : "text-red-600"}`}
+                  >
+                    {currencySymbol}
+                    {Math.abs(analysisData.totalCurrentCost - analysisData.totalProposedCost).toLocaleString("en-US", {
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2,
+                    })}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>First Month Savings</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div
+              className={`text-2xl font-bold ${analysisData.firstMonthSavings >= 0 ? "text-green-600" : "text-red-600"}`}
+            >
+              {currencySymbol}
+              {Math.abs(analysisData.firstMonthSavings).toLocaleString("en-US", {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2,
+              })}
+            </div>
+            <p className="text-sm text-gray-600 mt-1">
+              {analysisData.firstMonthSavings >= 0 ? "Month 1 Savings" : "Month 1 Additional Cost"}
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Key Metrics</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <div className="flex justify-between items-center">
+                <span className="text-gray-600">Discount Rate:</span>
+                <span className="font-semibold">{discountRateAnnual}% annual</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-gray-600">Analysis Period:</span>
+                <span className="font-semibold">
+                  {analysisYears} years ({analysisYears * 12} months)
+                </span>
+              </div>
+            </div>
           </CardContent>
         </Card>
       </div>
@@ -1159,6 +1224,18 @@ export function AnalysisResults({
                   tickFormatter={(value) => `${currencySymbol}${value.toLocaleString()}`}
                 />
                 <Tooltip
+                  itemSorter={(item) => {
+                    switch (item.dataKey) {
+                      case "current":
+                        return 0;
+                      case "proposed":
+                        return 1;
+                      case "savings":
+                        return 2;
+                      default:
+                        return 3;
+                    }
+                  }}
                   formatter={(value: number, name: string) => {
                     const labels = {
                       current: "Current Equipment",
@@ -1172,7 +1249,19 @@ export function AnalysisResults({
                   }}
                   labelFormatter={(month) => `Month ${month}`}
                 />
-                <Legend />
+                <Legend
+                  itemSorter={(item) => {
+                    switch (item.dataKey) {
+                      case "current":
+                        return 0;
+                      case "proposed":
+                        return 1;
+                      case "savings":
+                        return 2;
+                      default:
+                        return 3;
+                    }
+                  }} />
                 <Line type="monotone" dataKey="current" stroke="#ef4444" strokeWidth={2} name="Current Equipment" />
                 <Line type="monotone" dataKey="proposed" stroke="#3b82f6" strokeWidth={2} name="Proposed Equipment" />
                 <Line type="monotone" dataKey="savings" stroke="#10b981" strokeWidth={2} name="Monthly Savings" />
@@ -1204,6 +1293,18 @@ export function AnalysisResults({
                 <XAxis dataKey="year" />
                 <YAxis tickFormatter={(value) => `${currencySymbol}${(value / 1000).toFixed(0)}k`} />
                 <Tooltip
+                  itemSorter={(item) => {
+                    switch (item.dataKey) {
+                      case "current":
+                        return 0;
+                      case "proposed":
+                        return 1;
+                      case "savings":
+                        return 2;
+                      default:
+                        return 3;
+                    }
+                  }}
                   formatter={(value: number, name: string) => {
                     const labels = {
                       current: "Current Equipment",
@@ -1216,7 +1317,19 @@ export function AnalysisResults({
                     ]
                   }}
                 />
-                <Legend />
+                <Legend
+                  itemSorter={(item) => {
+                    switch (item.dataKey) {
+                      case "current":
+                        return 0;
+                      case "proposed":
+                        return 1;
+                      case "savings":
+                        return 2;
+                      default:
+                        return 3;
+                    }
+                  }} />
                 <Bar dataKey="current" fill="#ef4444" name="Current Equipment" />
                 <Bar dataKey="proposed" fill="#3b82f6" name="Proposed Equipment" />
                 <Bar dataKey="savings" fill="#10b981" name="Annual Savings" />
@@ -1226,92 +1339,7 @@ export function AnalysisResults({
         </CardContent>
       </Card>
 
-      {/* Summary Cards */}
-      <div className="grid gap-6 md:grid-cols-3">
-        <Card>
-          <CardHeader>
-            <CardTitle>{analysisYears}-Year Total Costs</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <div className="flex justify-between items-center">
-                <span className="text-gray-600">Current Equipment:</span>
-                <span className="font-semibold text-red-600">
-                  {currencySymbol}
-                  {analysisData.totalCurrentCost.toLocaleString("en-US", {
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2,
-                  })}
-                </span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-gray-600">Proposed Equipment:</span>
-                <span className="font-semibold text-blue-600">
-                  {currencySymbol}
-                  {analysisData.totalProposedCost.toLocaleString("en-US", {
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2,
-                  })}
-                </span>
-              </div>
-              <div className="border-t pt-2">
-                <div className="flex justify-between items-center">
-                  <span className="font-medium">Total Savings:</span>
-                  <span
-                    className={`font-bold ${(analysisData.totalCurrentCost - analysisData.totalProposedCost) >= 0 ? "text-green-600" : "text-red-600"}`}
-                  >
-                    {currencySymbol}
-                    {Math.abs(analysisData.totalCurrentCost - analysisData.totalProposedCost).toLocaleString("en-US", {
-                      minimumFractionDigits: 2,
-                      maximumFractionDigits: 2,
-                    })}
-                  </span>
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>First Month Savings</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div
-              className={`text-2xl font-bold ${analysisData.firstMonthSavings >= 0 ? "text-green-600" : "text-red-600"}`}
-            >
-              {currencySymbol}
-              {Math.abs(analysisData.firstMonthSavings).toLocaleString("en-US", {
-                minimumFractionDigits: 2,
-                maximumFractionDigits: 2,
-              })}
-            </div>
-            <p className="text-sm text-gray-600 mt-1">
-              {analysisData.firstMonthSavings >= 0 ? "Month 1 Savings" : "Month 1 Additional Cost"}
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Key Metrics</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <div className="flex justify-between items-center">
-                <span className="text-gray-600">Discount Rate:</span>
-                <span className="font-semibold">{discountRateAnnual}% annual</span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-gray-600">Analysis Period:</span>
-                <span className="font-semibold">
-                  {analysisYears} years ({analysisYears * 12} months)
-                </span>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+     
     </div>
   )
 }

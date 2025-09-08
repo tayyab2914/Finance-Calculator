@@ -15,13 +15,36 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { User, LogOut, Settings } from "lucide-react"
 import logo from "@/public/logo.png"
+import { useEffect, useState } from "react"
+import { getUserProfile } from "@/lib/database"
 
 export function Navigation() {
   const pathname = usePathname()
   const { user, signOut } = useAuth()
+  const [profile, setProfile] = useState<any>(null)
+
+  useEffect(() => {
+    if (user) {
+      loadProfile()
+    }
+  }, [user])
+
+  const loadProfile = async () => {
+    try {
+      const data = await getUserProfile()
+      // Bust cache by adding timestamp
+      if (data?.company_logo_url) {
+        data.company_logo_url = `${data.company_logo_url}?t=${Date.now()}`
+      }
+      setProfile(data)
+    } catch (error) {
+      console.error("Failed to load profile", error)
+    }
+  }
 
   const publicNavItems = [
     { href: "/", label: "Home" },
+    { href: "/upgrade-analysis", label: "Upgrade Analysis" },
     { href: "/settlement-calculator", label: "Settlement Calculator" },
     { href: "/tools", label: "Tools" },
   ]
@@ -44,7 +67,7 @@ export function Navigation() {
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-16">
           <Link href={user ? "/dashboard" : "/"} className="font-bold text-xl text-blue-600">
-             <Image src={logo} alt="Logo" width={150} height={40} />
+            <Image src={logo} alt="Logo" width={150} height={40} />
           </Link>
 
           <div className="flex items-center space-x-8">
@@ -67,8 +90,18 @@ export function Navigation() {
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" className="flex items-center gap-2">
-                    <User className="w-4 h-4" />
-                    <span className="hidden sm:inline">{user.user_metadata?.full_name || user.email}</span>
+                    {profile?.company_logo_url ? (
+                      <img
+                        src={profile.company_logo_url}
+                        alt="Profile"
+                        className="w-8 h-8 rounded-full object-cover border"
+                      />
+                    ) : (
+                      <User className="w-5 h-5 text-gray-600" />
+                    )}
+                    <span className="hidden sm:inline">
+                      {user.user_metadata?.full_name || user.email}
+                    </span>
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-56">
@@ -79,7 +112,10 @@ export function Navigation() {
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={handleSignOut} className="flex items-center gap-2 text-red-600">
+                  <DropdownMenuItem
+                    onClick={handleSignOut}
+                    className="flex items-center gap-2 text-red-600"
+                  >
                     <LogOut className="w-4 h-4" />
                     Sign Out
                   </DropdownMenuItem>

@@ -375,7 +375,8 @@ export default function UpgradeAnalysisPage() {
       <div className="container mx-auto px-4 max-w-6xl">
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">Upgrade Analysis</h1>
-          <p className="text-gray-600">Compare current vs proposed equipment costs and calculate NPV</p>
+          <p className="text-gray-600">Compare current vs proposed equipment costs and 
+            calculate the total overall projected contracted costs or savings in todays money</p>
         </div>
 
         {/* Progress Steps */}
@@ -396,7 +397,7 @@ export default function UpgradeAnalysisPage() {
           </div>
           <div className="flex justify-center mt-2">
             <div className="text-sm text-gray-600">
-              {step === 1 && "Client Details"}
+              {step === 1 && "Equipment User Details"}
               {step === 2 && "Current Equipment"}
               {step === 3 && "Proposed Equipment"}
               {step === 4 && "Analysis Results"}
@@ -407,12 +408,12 @@ export default function UpgradeAnalysisPage() {
         {step === 1 && (
           <Card>
             <CardHeader>
-              <CardTitle>Client Details</CardTitle>
+              <CardTitle>Equipment User Details</CardTitle>
             </CardHeader>
             <CardContent>
               <ClientDetailsForm details={clientDetails} onChange={setClientDetails} />
               <div className="flex justify-end mt-6">
-                <Button onClick={() => setStep(2)} disabled={!clientDetails.companyName || !clientDetails.email}>
+                <Button onClick={() => setStep(2)} disabled={!clientDetails.companyName}>
                   Next: Current Equipment
                 </Button>
               </div>
@@ -425,10 +426,7 @@ export default function UpgradeAnalysisPage() {
             <Card>
               <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle>Current Equipment</CardTitle>
-                <Button onClick={addCurrentEquipment} size="sm">
-                  <Plus className="w-4 h-4 mr-2" />
-                  Add Equipment
-                </Button>
+        
               </CardHeader>
               <CardContent>
                 {currentEquipment.length === 0 ? (
@@ -478,10 +476,6 @@ export default function UpgradeAnalysisPage() {
             <Card>
               <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle>Proposed Equipment</CardTitle>
-                <Button onClick={addProposedEquipment} size="sm">
-                  <Plus className="w-4 h-4 mr-2" />
-                  Add Equipment
-                </Button>
               </CardHeader>
               <CardContent>
                 {proposedEquipment.length === 0 ? (
