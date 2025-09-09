@@ -76,6 +76,8 @@ interface AnalysisData {
   totalCurrentCost: number
   totalProposedCost: number
   firstMonthSavings: number
+  firstMonthCurrent: number
+  firstMonthProposed: number
   allDetails: MonthlyBreakdown[]
   currentCashFlows: number[]
   proposedCashFlows: number[]
@@ -176,6 +178,8 @@ export function AnalysisResults({
       totalCurrentCost,
       totalProposedCost,
       firstMonthSavings,
+      firstMonthCurrent: currentResult.totalCashFlows[0],
+      firstMonthProposed: proposedResult.totalCashFlows[0],
       allDetails,
       currentCashFlows: currentResult.totalCashFlows,
       proposedCashFlows: proposedResult.totalCashFlows,
@@ -685,7 +689,7 @@ export function AnalysisResults({
       </Card>
 
       {/* Key Metrics */}
-      <div className="grid gap-6 md:grid-cols-3">
+      {/* <div className="grid gap-6 md:grid-cols-3">
         <Card>
           <CardHeader>
             <CardTitle className="text-lg">Current NPV</CardTitle>
@@ -730,10 +734,10 @@ export function AnalysisResults({
             <p className="text-sm text-gray-600 mt-1">{analysisData.npvSavings >= 0 ? "Savings" : "Additional cost"}</p>
           </CardContent>
         </Card>
-      </div>
+      </div> */}
 
-       {/* Summary Cards */}
-      <div className="grid gap-6 md:grid-cols-3">
+      {/* Summary Cards */}
+      {/* <div className="grid gap-6 md:grid-cols-3">
         <Card>
           <CardHeader>
             <CardTitle>{analysisYears}-Year Total Costs</CardTitle>
@@ -817,7 +821,99 @@ export function AnalysisResults({
             </div>
           </CardContent>
         </Card>
+      </div> */}
+
+
+
+
+
+      <div className="results-table-container">
+        <h2 className="text-xl font-bold mb-4">Results and Reports</h2>
+        <table className="min-w-full border-collapse border border-gray-300">
+          <thead>
+            <tr className="bg-gray-100">
+              <th className="border border-gray-300 px-4 py-2 text-left">Metric</th>
+              <th className="border border-gray-300 px-4 py-2 text-right">Existing</th>
+              <th className="border border-gray-300 px-4 py-2 text-right">Proposed</th>
+              <th className="border border-gray-300 px-4 py-2 text-right">Savings</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td className="border border-gray-300 px-4 py-2 font-semibold">NPV Totals</td>
+              <td className="border border-gray-300 px-4 py-2 text-right text-red-600">
+                {currencySymbol}
+                {analysisData.currentNPV.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </td>
+              <td className="border border-gray-300 px-4 py-2 text-right text-blue-600">
+                {currencySymbol}
+                {analysisData.proposedNPV.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </td>
+              <td
+                className={`border border-gray-300 px-4 py-2 text-right ${analysisData.npvSavings >= 0
+                  ? "bg-green-50 text-green-700"
+                  : "bg-red-50 text-red-700"
+                  }`}
+              >
+                <div className="flex items-center justify-end space-x-2">
+                  <span
+                    className={`text-xs font-semibold px-2 py-1 rounded-full ${analysisData.npvSavings >= 0
+                      ? "bg-green-200 text-green-800"
+                      : "bg-red-200 text-red-800"
+                      }`}
+                  >
+                    Decision Cost
+                  </span>
+                  <span className="text-lg font-extrabold">
+                    {currencySymbol}
+                    {Math.abs(analysisData.npvSavings).toLocaleString("en-US", {
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2,
+                    })}
+                  </span>
+                </div>
+              </td>
+
+            </tr>
+            <tr>
+              <td className="border border-gray-300 px-4 py-2 font-semibold">Gross Totals</td>
+              <td className="border border-gray-300 px-4 py-2 text-right text-red-600">
+                {currencySymbol}
+                {analysisData.totalCurrentCost.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </td>
+              <td className="border border-gray-300 px-4 py-2 text-right text-blue-600">
+                {currencySymbol}
+                {analysisData.totalProposedCost.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </td>
+              <td className={`border border-gray-300 px-4 py-2 text-right font-bold ${(analysisData.totalCurrentCost - analysisData.totalProposedCost) >= 0 ? "text-green-600" : "text-red-600"}`}>
+                {currencySymbol}
+                {Math.abs(analysisData.totalCurrentCost - analysisData.totalProposedCost).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </td>
+            </tr>
+            <tr>
+              <td className="border border-gray-300 px-4 py-2 font-semibold">1st Month</td>
+              <td className="border border-gray-300 px-4 py-2 text-right text-red-600">
+                {currencySymbol}
+                {analysisData.firstMonthCurrent?.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) /* Assuming you have this */}
+              </td>
+              <td className="border border-gray-300 px-4 py-2 text-right text-blue-600">
+                {currencySymbol}
+                {analysisData.firstMonthProposed?.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) /* Assuming you have this */}
+              </td>
+              <td className={`border border-gray-300 px-4 py-2 text-right font-bold ${analysisData.firstMonthSavings >= 0 ? "text-green-600" : "text-red-600"}`}>
+                {currencySymbol}
+                {Math.abs(analysisData.firstMonthSavings).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </td>
+            </tr>
+          </tbody>
+        </table>
       </div>
+
+
+
+
+
+
 
       {/* Equipment Details with View Options */}
       <Card>
@@ -1339,7 +1435,7 @@ export function AnalysisResults({
         </CardContent>
       </Card>
 
-     
+
     </div>
   )
 }
