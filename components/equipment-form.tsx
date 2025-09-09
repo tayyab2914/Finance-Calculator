@@ -593,7 +593,7 @@ export function EquipmentForm({
                     {/* Black Volume Row */}
                     <div className="grid grid-cols-4 gap-4">
                       <span>Black Volume</span>
-                      <span>{currentTotals.black.toLocaleString()}</span>
+                      <span>{Number(currentTotals.black)}</span>
                       <span
                         className={
                           proposedTotals.black !== currentTotals.black
@@ -601,7 +601,7 @@ export function EquipmentForm({
                             : ""
                         }
                       >
-                        {proposedTotals.black.toLocaleString()}
+                        {Number(proposedTotals.black)}
                       </span>
                       <span
                         className={
@@ -618,7 +618,7 @@ export function EquipmentForm({
                     {/* Color Volume Row */}
                     <div className="grid grid-cols-4 gap-4">
                       <span>Color Volume</span>
-                      <span>{currentTotals.color.toLocaleString()}</span>
+                      <span>{Number(currentTotals.color)}</span>
                       <span
                         className={
                           proposedTotals.color !== currentTotals.color
@@ -626,7 +626,7 @@ export function EquipmentForm({
                             : ""
                         }
                       >
-                        {proposedTotals.color.toLocaleString()}
+                        {Number(proposedTotals.color)}
                       </span>
                       <span
                         className={

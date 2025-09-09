@@ -59,9 +59,9 @@ export function getUnifiedVolume(equipment: Equipment, colorType: "black" | "col
  */
 export function getUnifiedVolumeGrowth(equipment: Equipment, colorType: "black" | "color"): number {
   if (colorType === "black") {
-    return equipment.clickCharges?.black?.growthPercent || equipment.tonerCosts?.blackVolumeGrowthPercent || 0
+    return Number(equipment.clickCharges?.black?.growthPercent || equipment.tonerCosts?.blackVolumeGrowthPercent || 0)
   } else {
-    return equipment.clickCharges?.color?.growthPercent || equipment.tonerCosts?.colorVolumeGrowthPercent || 0
+    return Number(equipment.clickCharges?.color?.growthPercent || equipment.tonerCosts?.colorVolumeGrowthPercent || 0)
   }
 }
 
@@ -80,7 +80,7 @@ export function calculateLeasePayment(
 } {
   if (equipment.ownership === "cash" && equipment.cashPrice && month === 1) {
     return {
-      amount: -equipment.cashPrice,
+      amount: Number(equipment.cashPrice),
       escalationApplied: false,
       isPaymentMonth: false,
       isPostInitialPeriod: false,

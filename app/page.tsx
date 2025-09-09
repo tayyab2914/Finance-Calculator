@@ -30,16 +30,18 @@ export default function HomePage() {
             </h1>
             <p className="text-xl text-muted-foreground max-w-3xl mx-auto mb-8 leading-relaxed animate-fade-in-up animation-delay-400">
               Powerful financial tools that reveal the true cost of upgrading—or not upgrading—digital printing equipment,
-               helping users decide with confidence and enabling sales consultants to win more business.
+              helping users decide with confidence and enabling sales consultants to win more business.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-12 animate-fade-in-up animation-delay-600">
-              <Button
-                size="lg"
-                className="bg-primary hover:bg-primary/90 text-primary-foreground px-8 py-3 text-lg transform hover:scale-105 transition-all duration-300"
-              >
-                Start Free Analysis{" "}
-                <ArrowRight className="ml-2 w-5 h-5 transition-transform group-hover:translate-x-1" />
-              </Button>
+              <Link href="/auth/signup">
+                <Button
+                  size="lg"
+                  className="bg-primary hover:bg-primary/90 text-primary-foreground px-8 py-3 text-lg transform hover:scale-105 transition-all duration-300"
+                >
+                  Start Free Analysis{" "}
+                  <ArrowRight className="ml-2 w-5 h-5 transition-transform group-hover:translate-x-1" />
+                </Button>
+              </Link>
               <Button
                 size="lg"
                 variant="outline"
@@ -360,13 +362,15 @@ export default function HomePage() {
               Join thousands of equipment professionals who trust Upgrr for their financial analysis needs.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center animate-fade-in-up animation-delay-400">
-              <Button
-                size="lg"
-                className="bg-primary hover:bg-primary/90 text-primary-foreground px-8 py-3 text-lg transform hover:scale-105 transition-all duration-300 group"
-              >
-                Start Your Free Analysis{" "}
-                <ArrowRight className="ml-2 w-5 h-5 transition-transform group-hover:translate-x-1" />
-              </Button>
+              <Link href="/auth/signup">
+                <Button
+                  size="lg"
+                  className="bg-primary hover:bg-primary/90 text-primary-foreground px-8 py-3 text-lg transform hover:scale-105 transition-all duration-300 group"
+                >
+                  Start Your Free Analysis{" "}
+                  <ArrowRight className="ml-2 w-5 h-5 transition-transform group-hover:translate-x-1" />
+                </Button>
+              </Link>
               <Button
                 size="lg"
                 variant="outline"

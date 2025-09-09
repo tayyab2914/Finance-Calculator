@@ -44,14 +44,14 @@ export function Navigation() {
 
   const publicNavItems = [
     { href: "/", label: "Home" },
-    { href: "/upgrade-analysis", label: "Upgrade Analysis" },
+    { href: "/auth/login", label: "Upgrade Analysis" },
     { href: "/settlement-calculator", label: "Settlement Calculator" },
     { href: "/tools", label: "Tools" },
   ]
 
   const authenticatedNavItems = [
     { href: "/dashboard", label: "Dashboard" },
-    { href: "/upgrade-analysis", label: "New Analysis" },
+    { href: "/upgrade-analysis", label: "Upgrade Analysis" },
     { href: "/settlement-calculator", label: "Settlement Calculator" },
     { href: "/tools", label: "Tools" },
   ]
