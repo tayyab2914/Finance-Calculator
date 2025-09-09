@@ -9,6 +9,7 @@ import { AnalysisResults } from "@/components/analysis-results"
 import { Plus } from "lucide-react"
 import { useAuth } from "@/contexts/auth-context"
 import { getUserProfile } from "@/lib/database"
+import { ProtectedRoute } from "@/components/auth/protected-route"
 
 export interface ClientDetails {
   companyName: string
@@ -82,7 +83,7 @@ export interface Equipment {
   savingsPerMonth?: number | string
 }
 
-export default function UpgradeAnalysisPage() {
+function UpgradeAnalysisContent() {
   const { user } = useAuth()
   const [step, setStep] = useState(1)
   const [defaultDiscountRate, setDefaultDiscountRate] = useState(8)
@@ -375,8 +376,10 @@ export default function UpgradeAnalysisPage() {
       <div className="container mx-auto px-4 max-w-6xl">
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">Upgrade Analysis</h1>
-          <p className="text-gray-600">Compare current vs proposed equipment costs and 
-            calculate the total overall projected contracted costs or savings in todays money</p>
+          <p className="text-gray-600">
+            Compare current vs proposed equipment costs and calculate the total overall projected contracted costs or
+            savings in todays money
+          </p>
         </div>
 
         {/* Progress Steps */}
@@ -426,7 +429,6 @@ export default function UpgradeAnalysisPage() {
             <Card>
               <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle>Current Equipment</CardTitle>
-        
               </CardHeader>
               <CardContent>
                 {currentEquipment.length === 0 ? (
@@ -540,5 +542,13 @@ export default function UpgradeAnalysisPage() {
         )}
       </div>
     </div>
+  )
+}
+
+export default function UpgradeAnalysisPage() {
+  return (
+    <ProtectedRoute>
+      <UpgradeAnalysisContent />
+    </ProtectedRoute>
   )
 }

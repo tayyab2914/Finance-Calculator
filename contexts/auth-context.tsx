@@ -4,7 +4,7 @@ import type React from "react"
 import { createContext, useContext, useEffect, useState, useRef } from "react"
 import type { User, Session } from "@supabase/supabase-js"
 import { supabase } from "@/lib/supabase"
-import { useRouter } from "next/navigation"
+import { useRouter, usePathname } from "next/navigation"
 
 interface AuthContextType {
   user: User | null
@@ -31,22 +31,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null)
   const [loading, setLoading] = useState(true)
   const router = useRouter()
+  const pathname = usePathname()
 
   const hasRedirected = useRef(false)
 
   useEffect(() => {
     if (!loading && user) {
-      if (!hasRedirected.current) {
+      // Only redirect to dashboard on first login, not on every page load
+      if (!hasRedirected.current && (pathname === "/" || pathname === "/auth/login" || pathname === "/auth/signup")) {
         console.log("✅ First login → redirecting /dashboard")
         router.replace("/dashboard")
         hasRedirected.current = true
       }
     } else if (!loading && !user) {
-      console.log("✅ Signed out → redirecting /")
-      router.replace("/")
-      hasRedirected.current = false // reset so next login redirects again
+      // Only redirect to home on logout, not when accessing protected routes
+      if (hasRedirected.current) {
+        console.log("✅ Signed out → redirecting /")
+        router.replace("/")
+        hasRedirected.current = false
+      }
     }
-  }, [user, loading, router])
+  }, [user, loading, router, pathname])
 
   useEffect(() => {
     console.log("🔄 Checking initial session...")
