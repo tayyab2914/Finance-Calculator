@@ -497,15 +497,15 @@ export function AnalysisResults({
                 <h3 className="font-semibold text-gray-900 mb-3">Analysis Summary</h3>
                 <div className="space-y-2">
                   <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium text-gray-600 w-20">Current:</span>
-                    <span className="text-sm text-red-600 font-medium">{currentEquipment.length} equipment</span>
+                    <span className="text-sm font-medium text-gray-600 w-30">Current equipment:</span>
+                    <span className="text-sm text-red-600 font-medium">{currentEquipment.length}</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium text-gray-600 w-20">Proposed:</span>
-                    <span className="text-sm text-blue-600 font-medium">{proposedEquipment.length} equipment</span>
+                    <span className="text-sm font-medium text-gray-600 w-30">Proposed equipment:</span>
+                    <span className="text-sm text-blue-600 font-medium">{proposedEquipment.length}</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium text-gray-600 w-20">Period:</span>
+                    <span className="text-sm font-medium text-gray-600 w-30">Period:</span>
                     <span className="text-sm text-gray-900">
                       {analysisYears} years ({analysisYears * 12} months)
                     </span>
@@ -688,142 +688,6 @@ export function AnalysisResults({
         </CardContent>
       </Card>
 
-      {/* Key Metrics */}
-      {/* <div className="grid gap-6 md:grid-cols-3">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">Current NPV</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-red-600">
-              {currencySymbol}
-              {analysisData.currentNPV.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-            </div>
-            <p className="text-sm text-gray-600 mt-1">{analysisYears}-year net present value</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">Proposed NPV</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-blue-600">
-              {currencySymbol}
-              {analysisData.proposedNPV.toLocaleString("en-US", {
-                minimumFractionDigits: 2,
-                maximumFractionDigits: 2,
-              })}
-            </div>
-            <p className="text-sm text-gray-600 mt-1">{analysisYears}-year net present value</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">NPV Savings</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className={`text-2xl font-bold ${analysisData.npvSavings >= 0 ? "text-green-600" : "text-red-600"}`}>
-              {currencySymbol}
-              {Math.abs(analysisData.npvSavings).toLocaleString("en-US", {
-                minimumFractionDigits: 2,
-                maximumFractionDigits: 2,
-              })}
-            </div>
-            <p className="text-sm text-gray-600 mt-1">{analysisData.npvSavings >= 0 ? "Savings" : "Additional cost"}</p>
-          </CardContent>
-        </Card>
-      </div> */}
-
-      {/* Summary Cards */}
-      {/* <div className="grid gap-6 md:grid-cols-3">
-        <Card>
-          <CardHeader>
-            <CardTitle>{analysisYears}-Year Total Costs</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <div className="flex justify-between items-center">
-                <span className="text-gray-600">Current Equipment:</span>
-                <span className="font-semibold text-red-600">
-                  {currencySymbol}
-                  {analysisData.totalCurrentCost.toLocaleString("en-US", {
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2,
-                  })}
-                </span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-gray-600">Proposed Equipment:</span>
-                <span className="font-semibold text-blue-600">
-                  {currencySymbol}
-                  {analysisData.totalProposedCost.toLocaleString("en-US", {
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2,
-                  })}
-                </span>
-              </div>
-              <div className="border-t pt-2">
-                <div className="flex justify-between items-center">
-                  <span className="font-medium">Total Savings:</span>
-                  <span
-                    className={`font-bold ${(analysisData.totalCurrentCost - analysisData.totalProposedCost) >= 0 ? "text-green-600" : "text-red-600"}`}
-                  >
-                    {currencySymbol}
-                    {Math.abs(analysisData.totalCurrentCost - analysisData.totalProposedCost).toLocaleString("en-US", {
-                      minimumFractionDigits: 2,
-                      maximumFractionDigits: 2,
-                    })}
-                  </span>
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>First Month Savings</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div
-              className={`text-2xl font-bold ${analysisData.firstMonthSavings >= 0 ? "text-green-600" : "text-red-600"}`}
-            >
-              {currencySymbol}
-              {Math.abs(analysisData.firstMonthSavings).toLocaleString("en-US", {
-                minimumFractionDigits: 2,
-                maximumFractionDigits: 2,
-              })}
-            </div>
-            <p className="text-sm text-gray-600 mt-1">
-              {analysisData.firstMonthSavings >= 0 ? "Month 1 Savings" : "Month 1 Additional Cost"}
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Key Metrics</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <div className="flex justify-between items-center">
-                <span className="text-gray-600">Discount Rate:</span>
-                <span className="font-semibold">{discountRateAnnual}% annual</span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-gray-600">Analysis Period:</span>
-                <span className="font-semibold">
-                  {analysisYears} years ({analysisYears * 12} months)
-                </span>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div> */}
-
-
 
 
 
@@ -856,14 +720,6 @@ export function AnalysisResults({
                   }`}
               >
                 <div className="flex items-center justify-end space-x-2">
-                  <span
-                    className={`text-xs font-semibold px-2 py-1 rounded-full ${analysisData.npvSavings >= 0
-                      ? "bg-green-200 text-green-800"
-                      : "bg-red-200 text-red-800"
-                      }`}
-                  >
-                    Decision Cost
-                  </span>
                   <span className="text-lg font-extrabold">
                     {currencySymbol}
                     {Math.abs(analysisData.npvSavings).toLocaleString("en-US", {
@@ -1312,11 +1168,25 @@ export function AnalysisResults({
         <CardContent>
           <div className="h-96">
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={analysisData.chartData}>
+              <LineChart data={analysisData.chartData}
+                margin={{ top: 20, right: 30, left: 60, bottom: 40 }}>
                 <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="month" label={{ value: "Month", position: "insideBottom", offset: -5 }} />
+                <XAxis
+                  dataKey="month"
+                  label={{
+                    value: "Month",
+                    position: "insideBottom",
+                    offset: -5, // pushes the label down
+                  }}
+                />
                 <YAxis
-                  label={{ value: `Monthly Cost (${currencySymbol})`, angle: -90, position: "insideLeft" }}
+                  label={{
+                    value: `Monthly Cost (${currencySymbol})`,
+                    angle: -90,
+                    position: "insideLeft",
+                    offset: -30, // pushes the label left
+                    dy: 20, // extra vertical padding
+                  }}
                   tickFormatter={(value) => `${currencySymbol}${value.toLocaleString()}`}
                 />
                 <Tooltip
@@ -1434,6 +1304,49 @@ export function AnalysisResults({
           </div>
         </CardContent>
       </Card>
+
+      {/* Save Analysis Section */}
+      {!readOnly && user && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Save Analysis</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {saveError && (
+                <Alert variant="destructive">
+                  <AlertDescription>{saveError}</AlertDescription>
+                </Alert>
+              )}
+
+              {saveSuccess && (
+                <Alert className="border-green-200 bg-green-50">
+                  <AlertDescription className="text-green-800">{saveSuccess}</AlertDescription>
+                </Alert>
+              )}
+
+              <div className="flex gap-4">
+                <div className="flex-1">
+                  <Label htmlFor="analysisTitle">Analysis Title</Label>
+                  <Input
+                    id="analysisTitle"
+                    value={analysisTitle}
+                    onChange={(e) => setAnalysisTitle(e.target.value)}
+                    placeholder="Enter a title for this analysis"
+                  />
+                </div>
+                <div className="flex items-end">
+                  <Button onClick={handleSaveAnalysis} disabled={saving || !analysisTitle.trim()}>
+                    {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    <Save className="mr-2 h-4 w-4" />
+                    {analysisId ? "Update" : "Save"} Analysis
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
 
     </div>

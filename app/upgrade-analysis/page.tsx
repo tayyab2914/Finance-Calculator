@@ -388,9 +388,8 @@ function UpgradeAnalysisContent() {
             {[1, 2, 3, 4].map((stepNumber) => (
               <div key={stepNumber} className="flex items-center">
                 <div
-                  className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
-                    step >= stepNumber ? "bg-green-600 text-white" : "bg-gray-200 text-gray-600"
-                  }`}
+                  className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${step >= stepNumber ? "bg-green-600 text-white" : "bg-gray-200 text-gray-600"
+                    }`}
                 >
                   {stepNumber}
                 </div>
@@ -453,22 +452,25 @@ function UpgradeAnalysisContent() {
                     ))}
                   </div>
                 )}
-                <Button onClick={addCurrentEquipment} size="sm" className="mt-4">
-                  <Plus className="w-4 h-4 mr-2" />
-                  Add Equipment
-                </Button>
+
               </CardContent>
             </Card>
             <div className="flex justify-between">
               <Button variant="outline" onClick={() => setStep(1)}>
                 Back
               </Button>
-              <Button
-                onClick={() => setStep(3)}
-                disabled={currentEquipment.length === 0 || !areAllCurrentEquipmentsValid}
-              >
-                Next: Proposed Equipment
-              </Button>
+              <div className="flex flex-col space-y-2 sm:flex-row sm:space-x-2 sm:space-y-0">
+                <Button onClick={addCurrentEquipment}>
+                  <Plus className="w-4 h-4 mr-2" />
+                  Add Additional Equipment
+                </Button>
+                <Button
+                  onClick={() => setStep(3)}
+                  disabled={currentEquipment.length === 0 || !areAllCurrentEquipmentsValid}
+                >
+                  Next: Proposed Equipment
+                </Button>
+              </div>
             </div>
           </div>
         )}
@@ -502,22 +504,25 @@ function UpgradeAnalysisContent() {
                     ))}
                   </div>
                 )}
-                <Button onClick={addProposedEquipment} size="sm" className="mt-4">
-                  <Plus className="w-4 h-4 mr-2" />
-                  Add Equipment
-                </Button>
               </CardContent>
             </Card>
             <div className="flex justify-between">
               <Button variant="outline" onClick={() => setStep(2)}>
                 Back
               </Button>
-              <Button
-                onClick={() => setStep(4)}
-                disabled={proposedEquipment.length === 0 || !areAllProposedEquipmentsValid}
-              >
-                Generate Analysis
-              </Button>
+              <div className="flex flex-col space-y-2 sm:flex-row sm:space-x-2 sm:space-y-0">
+                <Button onClick={addProposedEquipment}>
+                  <Plus className="w-4 h-4 mr-2" />
+                  Add Additional Equipment
+                </Button>
+                <Button
+                  onClick={() => setStep(4)}
+                  disabled={proposedEquipment.length === 0 || !areAllProposedEquipmentsValid}
+                >
+                  Generate Analysis
+                </Button>
+              </div>
+
             </div>
           </div>
         )}

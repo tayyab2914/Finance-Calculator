@@ -24,33 +24,23 @@ export function ClientDetailsForm({ details, onChange }: ClientDetailsFormProps)
             placeholder="Enter company name"
           />
         </div>
-        <div className="space-y-2">
-            <Label htmlFor="contactNumber">Contact Number</Label>
-            <Input
-              id="contactNumber"
-              type="tel"
-              value={details.contactNumber || ""}
-              onChange={(e) => onChange({ ...details, contactNumber: e.target.value })}
-              placeholder="Enter contact number"
-            />
-          </div>
-        
+
       </div>
 
 
 
-     
-        <div className="grid gap-6 md:grid-cols-2">
-          <div className="space-y-2">
-            <Label htmlFor="contactPersonName">Contact Person Full Name</Label>
-            <Input
-              id="contactPersonName"
-              value={details.contactPersonName || ""}
-              onChange={(e) => onChange({ ...details, contactPersonName: e.target.value })}
-              placeholder="Enter contact person name"
-            />
-          </div>
-          <div className="space-y-2">
+
+      <div className="grid gap-6 md:grid-cols-2">
+        <div className="space-y-2">
+          <Label htmlFor="contactPersonName">Contact Person</Label>
+          <Input
+            id="contactPersonName"
+            value={details.contactPersonName || ""}
+            onChange={(e) => onChange({ ...details, contactPersonName: e.target.value })}
+            placeholder="Enter contact person name"
+          />
+        </div>
+        <div className="space-y-2">
           <Label htmlFor="email">Email </Label>
           <Input
             id="email"
@@ -60,10 +50,10 @@ export function ClientDetailsForm({ details, onChange }: ClientDetailsFormProps)
             placeholder="Enter email address"
           />
         </div>
-        </div>
+      </div>
 
-      
-     
+
+
     </div>
   )
 }

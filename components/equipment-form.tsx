@@ -392,9 +392,6 @@ export function EquipmentForm({
                   onChange={(e) => onChange({ cashPrice: e.target.value })}
                   placeholder="0.00"
                 />
-                <p className="text-sm text-muted-foreground">
-                  This amount will create a negative cash flow in month 1 only
-                </p>
               </div>
             </CardContent>
           </Card>
