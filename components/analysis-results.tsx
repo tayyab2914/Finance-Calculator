@@ -780,7 +780,7 @@ export function AnalysisResults({
               value={viewMode}
               onValueChange={(value: "individual" | "totals") => setViewMode(value)}
             >
-              <SelectTrigger className="w-full sm:w-[200px]">
+              <SelectTrigger className="w-full sm:w-[200px] mr-2">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -797,6 +797,14 @@ export function AnalysisResults({
             >
               <Download className="w-4 h-4 mr-2" />
               Export CSV
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="w-full sm:w-auto"
+            >
+              <Download className="w-4 h-4 mr-2" />
+              Export Report to PDF
             </Button>
           </div>
 
