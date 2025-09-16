@@ -13,6 +13,7 @@ export const metadata: Metadata = {
   icons: {
     icon: "/favicon.png", // supports .ico, .png, .svg
   },
+    generator: 'v0.app'
 };
 
 export default function RootLayout({

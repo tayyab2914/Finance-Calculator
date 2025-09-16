@@ -54,6 +54,7 @@ interface AnalysisResultsProps {
   currentEquipment: Equipment[]
   proposedEquipment: Equipment[]
   onNavigateBack?: () => void
+  savedAnalysisTitle?: string
   initialAnalysisYears?: number
   initialDiscountRate?: number
   currencySymbol?: string
@@ -94,6 +95,7 @@ export function AnalysisResults({
   currentEquipment,
   proposedEquipment,
   onNavigateBack,
+  savedAnalysisTitle,
   initialAnalysisYears = 5,
   initialDiscountRate = 8,
   currencySymbol = "$",
@@ -110,7 +112,7 @@ export function AnalysisResults({
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
   const [saveSuccess, setSaveSuccess] = useState<string | null>(null)
-  const [analysisTitle, setAnalysisTitle] = useState<string>("")
+  const [analysisTitle, setAnalysisTitle] = useState<string>(savedAnalysisTitle ?? "");
   const discountOptions = ["6", "8", "10"]
 
   // If the current discountRateAnnual is not in options, add it

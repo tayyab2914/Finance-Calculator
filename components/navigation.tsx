@@ -1,7 +1,6 @@
 "use client"
 
 import Link from "next/link"
-import Image from "next/image"
 import { usePathname } from "next/navigation"
 import { useAuth } from "@/contexts/auth-context"
 import { cn } from "@/lib/utils"
@@ -13,10 +12,11 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { User, LogOut, Settings } from "lucide-react"
 import logo from "@/public/logo.png"
+import { User, LogOut, Settings } from "lucide-react"
 import { useEffect, useState } from "react"
 import { getUserProfile } from "@/lib/database"
+import Image from "next/image"
 
 export function Navigation() {
   const pathname = usePathname()
@@ -66,8 +66,8 @@ export function Navigation() {
     <nav className="bg-white shadow-sm border-b">
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-16">
-          <Link href={user ? "/dashboard" : "/"} className="font-bold text-xl text-blue-600">
-            <Image src={logo} alt="Logo" width={150} height={40} />
+          <Link href={user ? "/dashboard" : "/"} className="font-bold text-xl text-primary">
+           <Image src={logo} alt="Logo" width={150} height={40} />
           </Link>
 
           <div className="flex items-center space-x-8">
@@ -92,16 +92,14 @@ export function Navigation() {
                   <Button variant="ghost" className="flex items-center gap-2">
                     {profile?.company_logo_url ? (
                       <img
-                        src={profile.company_logo_url}
+                        src={profile.company_logo_url || "/placeholder.svg"}
                         alt="Profile"
                         className="w-8 h-8 rounded-full object-cover border"
                       />
                     ) : (
                       <User className="w-5 h-5 text-gray-600" />
                     )}
-                    <span className="hidden sm:inline">
-                      {user.user_metadata?.full_name || user.email}
-                    </span>
+                    <span className="hidden sm:inline">{user.user_metadata?.full_name || user.email}</span>
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-56">
@@ -112,10 +110,7 @@ export function Navigation() {
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem
-                    onClick={handleSignOut}
-                    className="flex items-center gap-2 text-red-600"
-                  >
+                  <DropdownMenuItem onClick={handleSignOut} className="flex items-center gap-2 text-red-600">
                     <LogOut className="w-4 h-4" />
                     Sign Out
                   </DropdownMenuItem>
