@@ -11,6 +11,7 @@ export interface SavedAnalysis {
     analysisYears: number
     discountRateAnnual: number
   }
+  status: "New" | "Sent" | "Approved" | "Lost"
   created_at: string
   updated_at: string
 }
@@ -36,6 +37,7 @@ export async function saveAnalysis(
   currentEquipment: Equipment[],
   proposedEquipment: Equipment[],
   analysisSettings: { analysisYears: number; discountRateAnnual: number },
+  status: "New" | "Sent" | "Approved" | "Lost" = "New",
 ) {
   const {
     data: { user },
@@ -54,6 +56,7 @@ export async function saveAnalysis(
       current_equipment: currentEquipment,
       proposed_equipment: proposedEquipment,
       analysis_settings: analysisSettings,
+      status,
     })
     .select()
     .single()
@@ -72,6 +75,7 @@ export async function updateAnalysis(
   currentEquipment: Equipment[],
   proposedEquipment: Equipment[],
   analysisSettings: { analysisYears: number; discountRateAnnual: number },
+  status?: "New" | "Sent" | "Approved" | "Lost",
 ) {
   const {
     data: { user },
@@ -81,16 +85,22 @@ export async function updateAnalysis(
     throw new Error("User not authenticated")
   }
 
+  const updateData: any = {
+    title,
+    client_details: clientDetails,
+    current_equipment: currentEquipment,
+    proposed_equipment: proposedEquipment,
+    analysis_settings: analysisSettings,
+    updated_at: new Date().toISOString(),
+  }
+
+  if (status) {
+    updateData.status = status
+  }
+
   const { data, error } = await supabase
     .from("analyses")
-    .update({
-      title,
-      client_details: clientDetails,
-      current_equipment: currentEquipment,
-      proposed_equipment: proposedEquipment,
-      analysis_settings: analysisSettings,
-      updated_at: new Date().toISOString(),
-    })
+    .update(updateData)
     .eq("id", analysisId)
     .eq("user_id", user.id)
     .select()
@@ -103,7 +113,11 @@ export async function updateAnalysis(
   return data
 }
 
-export async function getUserAnalyses(searchTerm?: string, sortBy?: string): Promise<SavedAnalysis[]> {
+export async function getUserAnalyses(
+  searchTerm?: string,
+  sortBy?: string,
+  statusFilter?: string,
+): Promise<SavedAnalysis[]> {
   const {
     data: { user },
   } = await supabase.auth.getUser()
@@ -114,14 +128,16 @@ export async function getUserAnalyses(searchTerm?: string, sortBy?: string): Pro
 
   let query = supabase.from("analyses").select("*").eq("user_id", user.id)
 
-  // Add search functionality
+  if (statusFilter && statusFilter !== "all") {
+    query = query.eq("status", statusFilter)
+  }
+
   if (searchTerm) {
     query = query.or(
       `title.ilike.%${searchTerm}%,client_details->>companyName.ilike.%${searchTerm}%,client_details->>email.ilike.%${searchTerm}%`,
     )
   }
 
-  // Add sorting
   switch (sortBy) {
     case "title":
       query = query.order("title", { ascending: true })
@@ -131,6 +147,9 @@ export async function getUserAnalyses(searchTerm?: string, sortBy?: string): Pro
       break
     case "created":
       query = query.order("created_at", { ascending: false })
+      break
+    case "status":
+      query = query.order("status", { ascending: true })
       break
     default:
       query = query.order("updated_at", { ascending: false })
@@ -166,6 +185,51 @@ export async function getAnalysisById(analysisId: string): Promise<SavedAnalysis
       return null // Analysis not found
     }
     throw new Error(`Failed to fetch analysis: ${error.message}`)
+  }
+
+  return data
+}
+
+export async function duplicateAnalysis(analysisId: string) {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) {
+    throw new Error("User not authenticated")
+  }
+
+  const { data: originalAnalysis, error: fetchError } = await supabase
+    .from("analyses")
+    .select("*")
+    .eq("id", analysisId)
+    .eq("user_id", user.id)
+    .single()
+
+  if (fetchError) {
+    throw new Error(`Failed to fetch original analysis: ${fetchError.message}`)
+  }
+
+  if (!originalAnalysis) {
+    throw new Error("Analysis not found")
+  }
+
+  const { data, error } = await supabase
+    .from("analyses")
+    .insert({
+      user_id: user.id,
+      title: `Copy of ${originalAnalysis.title}`,
+      client_details: originalAnalysis.client_details,
+      current_equipment: originalAnalysis.current_equipment,
+      proposed_equipment: originalAnalysis.proposed_equipment,
+      analysis_settings: originalAnalysis.analysis_settings,
+      status: originalAnalysis.status,
+    })
+    .select()
+    .single()
+
+  if (error) {
+    throw new Error(`Failed to duplicate analysis: ${error.message}`)
   }
 
   return data
@@ -225,7 +289,6 @@ export async function uploadCompanyLogo(file: File): Promise<string> {
 
   const { data } = supabase.storage.from("company-logos").getPublicUrl(fileName)
 
-  // Update profile with logo URL
   const { error: updateError } = await supabase
     .from("profiles")
     .update({ company_logo_url: data.publicUrl })
@@ -236,4 +299,31 @@ export async function uploadCompanyLogo(file: File): Promise<string> {
   }
 
   return data.publicUrl
+}
+
+export async function updateAnalysisStatus(analysisId: string, status: "New" | "Sent" | "Approved" | "Lost") {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) {
+    throw new Error("User not authenticated")
+  }
+
+  const { data, error } = await supabase
+    .from("analyses")
+    .update({
+      status,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", analysisId)
+    .eq("user_id", user.id)
+    .select()
+    .single()
+
+  if (error) {
+    throw new Error(`Failed to update analysis status: ${error.message}`)
+  }
+
+  return data
 }

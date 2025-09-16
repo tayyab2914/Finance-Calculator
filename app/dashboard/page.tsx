@@ -9,8 +9,14 @@ import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { getUserAnalyses, deleteAnalysis, type SavedAnalysis } from "@/lib/database"
-import { Loader2, Plus, Search, Trash2, Eye, Filter, SortAsc } from "lucide-react"
+import {
+  getUserAnalyses,
+  deleteAnalysis,
+  duplicateAnalysis,
+  updateAnalysisStatus,
+  type SavedAnalysis,
+} from "@/lib/database"
+import { Loader2, Plus, Search, Trash2, Eye, Filter, SortAsc, Copy } from "lucide-react"
 import Link from "next/link"
 
 export default function DashboardPage() {
@@ -28,12 +34,15 @@ function DashboardContent() {
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState("")
   const [sortBy, setSortBy] = useState("updated")
+  const [statusFilter, setStatusFilter] = useState("all")
   const [error, setError] = useState<string | null>(null)
   const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [duplicatingId, setDuplicatingId] = useState<string | null>(null)
+  const [updatingStatusId, setUpdatingStatusId] = useState<string | null>(null)
 
   useEffect(() => {
     loadAnalyses()
-  }, [])
+  }, [statusFilter])
 
   useEffect(() => {
     filterAndSortAnalyses()
@@ -42,7 +51,7 @@ function DashboardContent() {
   const loadAnalyses = async () => {
     try {
       setLoading(true)
-      const data = await getUserAnalyses()
+      const data = await getUserAnalyses(undefined, undefined, statusFilter)
       setAnalyses(data)
     } catch (error) {
       setError(error instanceof Error ? error.message : "Failed to load analyses")
@@ -54,7 +63,6 @@ function DashboardContent() {
   const filterAndSortAnalyses = () => {
     let filtered = [...analyses]
 
-    // Apply search filter
     if (searchTerm) {
       filtered = filtered.filter(
         (analysis) =>
@@ -64,7 +72,6 @@ function DashboardContent() {
       )
     }
 
-    // Apply sorting
     filtered.sort((a, b) => {
       switch (sortBy) {
         case "title":
@@ -73,6 +80,8 @@ function DashboardContent() {
           return a.client_details.companyName.localeCompare(b.client_details.companyName)
         case "created":
           return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+        case "status":
+          return a.status.localeCompare(b.status)
         case "updated":
         default:
           return new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()
@@ -95,6 +104,67 @@ function DashboardContent() {
       setError(error instanceof Error ? error.message : "Failed to delete analysis")
     } finally {
       setDeletingId(null)
+    }
+  }
+
+  const handleDuplicateAnalysis = async (analysisId: string) => {
+    setDuplicatingId(analysisId)
+    try {
+      const duplicatedAnalysis = await duplicateAnalysis(analysisId)
+      setAnalyses((prev) => [duplicatedAnalysis, ...prev])
+      setError(null)
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "Failed to duplicate analysis")
+    } finally {
+      setDuplicatingId(null)
+    }
+  }
+
+  const handleStatusUpdate = async (analysisId: string, newStatus: "New" | "Sent" | "Approved" | "Lost") => {
+    setUpdatingStatusId(analysisId)
+    try {
+      await updateAnalysisStatus(analysisId, newStatus)
+      setAnalyses((prev) =>
+        prev.map((analysis) =>
+          analysis.id === analysisId
+            ? { ...analysis, status: newStatus, updated_at: new Date().toISOString() }
+            : analysis,
+        ),
+      )
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "Failed to update status")
+    } finally {
+      setUpdatingStatusId(null)
+    }
+  }
+
+  const getStatusBadgeVariant = (status: string) => {
+    switch (status) {
+      case "New":
+        return "default"
+      case "Sent":
+        return "secondary"
+      case "Approved":
+        return "default"
+      case "Lost":
+        return "destructive"
+      default:
+        return "outline"
+    }
+  }
+
+  const getStatusBadgeColor = (status: string) => {
+    switch (status) {
+      case "New":
+        return "bg-blue-100 text-blue-800 hover:bg-blue-200"
+      case "Sent":
+        return "bg-yellow-100 text-yellow-800 hover:bg-yellow-200"
+      case "Approved":
+        return "bg-green-100 text-green-800 hover:bg-green-200"
+      case "Lost":
+        return "bg-red-100 text-red-800 hover:bg-red-200"
+      default:
+        return ""
     }
   }
 
@@ -192,6 +262,20 @@ function DashboardContent() {
                 />
               </div>
 
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger className="w-full sm:w-40">
+                  <Filter className="w-4 h-4 mr-2" />
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Status</SelectItem>
+                  <SelectItem value="New">New</SelectItem>
+                  <SelectItem value="Sent">Sent</SelectItem>
+                  <SelectItem value="Approved">Approved</SelectItem>
+                  <SelectItem value="Lost">Lost</SelectItem>
+                </SelectContent>
+              </Select>
+
               <Select value={sortBy} onValueChange={setSortBy}>
                 <SelectTrigger className="w-full sm:w-48">
                   <SortAsc className="w-4 h-4 mr-2" />
@@ -202,6 +286,7 @@ function DashboardContent() {
                   <SelectItem value="created">Date Created</SelectItem>
                   <SelectItem value="title">Title A-Z</SelectItem>
                   <SelectItem value="company">Company A-Z</SelectItem>
+                  <SelectItem value="status">Status</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -210,16 +295,21 @@ function DashboardContent() {
         <CardContent>
           {filteredAnalyses.length === 0 ? (
             <div className="text-center py-12">
-              {searchTerm ? (
+              {searchTerm || statusFilter !== "all" ? (
                 <div>
                   <Filter className="w-12 h-12 text-gray-400 mx-auto mb-4" />
                   <h3 className="text-lg font-medium text-gray-900 mb-2">No analyses found</h3>
                   <p className="text-gray-600 mb-4">
-                    No analyses match your search criteria. Try adjusting your search terms.
+                    No analyses match your search criteria. Try adjusting your search terms or filters.
                   </p>
-                  <Button variant="outline" onClick={() => setSearchTerm("")}>
-                    Clear Search
-                  </Button>
+                  <div className="flex gap-2 justify-center">
+                    <Button variant="outline" onClick={() => setSearchTerm("")}>
+                      Clear Search
+                    </Button>
+                    <Button variant="outline" onClick={() => setStatusFilter("all")}>
+                      Clear Filters
+                    </Button>
+                  </div>
                 </div>
               ) : (
                 <div>
@@ -243,6 +333,7 @@ function DashboardContent() {
                     <th className="text-left py-3 px-2 font-medium text-gray-700">Analysis Title</th>
                     <th className="text-left py-3 px-2 font-medium text-gray-700">Company</th>
                     <th className="text-left py-3 px-2 font-medium text-gray-700">Email</th>
+                    <th className="text-center py-3 px-2 font-medium text-gray-700">Status</th>
                     <th className="text-center py-3 px-2 font-medium text-gray-700">Period</th>
                     <th className="text-center py-3 px-2 font-medium text-gray-700">Current Equip</th>
                     <th className="text-center py-3 px-2 font-medium text-gray-700">Proposed Equip</th>
@@ -282,6 +373,25 @@ function DashboardContent() {
                         </span>
                       </td>
                       <td className="py-3 px-2 text-center">
+                        <Select
+                          value={analysis.status}
+                          onValueChange={(value) => handleStatusUpdate(analysis.id, value as any)}
+                          disabled={updatingStatusId === analysis.id}
+                        >
+                          <SelectTrigger
+                            className={`w-24 h-7 text-xs border-0 ${getStatusBadgeColor(analysis.status)}`}
+                          >
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="New">New</SelectItem>
+                            <SelectItem value="Sent">Sent</SelectItem>
+                            <SelectItem value="Approved">Approved</SelectItem>
+                            <SelectItem value="Lost">Lost</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </td>
+                      <td className="py-3 px-2 text-center">
                         <Badge variant="secondary" className="text-xs">
                           {analysis.analysis_settings.analysisYears}Y
                         </Badge>
@@ -316,6 +426,20 @@ function DashboardContent() {
                               <Eye className="w-3 h-3" />
                             </Button>
                           </Link>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleDuplicateAnalysis(analysis.id)}
+                            disabled={duplicatingId === analysis.id}
+                            className="h-8 px-2 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                            title="Duplicate analysis"
+                          >
+                            {duplicatingId === analysis.id ? (
+                              <Loader2 className="w-3 h-3 animate-spin" />
+                            ) : (
+                              <Copy className="w-3 h-3" />
+                            )}
+                          </Button>
                           <Button
                             variant="outline"
                             size="sm"

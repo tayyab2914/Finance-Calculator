@@ -12,7 +12,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import logo from "@/public/logo.png"
 import { User, LogOut, Settings } from "lucide-react"
 import { useEffect, useState } from "react"
 import { getUserProfile } from "@/lib/database"
@@ -67,7 +66,12 @@ export function Navigation() {
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-16">
           <Link href={user ? "/dashboard" : "/"} className="font-bold text-xl text-primary">
-           <Image src={logo} alt="Logo" width={150} height={40} />
+            <Image
+              src="/logo.png"
+              alt="Logo"
+              width={150}
+              height={40}
+            />
           </Link>
 
           <div className="flex items-center space-x-8">

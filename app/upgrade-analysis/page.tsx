@@ -10,6 +10,7 @@ import { Plus } from "lucide-react"
 import { useAuth } from "@/contexts/auth-context"
 import { getUserProfile } from "@/lib/database"
 import { ProtectedRoute } from "@/components/auth/protected-route"
+import { CSVUpload } from "@/components/csv-upload"
 
 export interface ClientDetails {
   companyName: string
@@ -388,8 +389,9 @@ function UpgradeAnalysisContent() {
             {[1, 2, 3, 4].map((stepNumber) => (
               <div key={stepNumber} className="flex items-center">
                 <div
-                  className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${step >= stepNumber ? "bg-green-600 text-white" : "bg-gray-200 text-gray-600"
-                    }`}
+                  className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
+                    step >= stepNumber ? "bg-green-600 text-white" : "bg-gray-200 text-gray-600"
+                  }`}
                 >
                   {stepNumber}
                 </div>
@@ -425,6 +427,14 @@ function UpgradeAnalysisContent() {
 
         {step === 2 && (
           <div className="space-y-6">
+            {/* CSV Upload Component for Current Equipment */}
+            <CSVUpload
+              equipmentType="current"
+              onEquipmentImported={(importedEquipment) => {
+                setCurrentEquipment((prev) => [...prev, ...importedEquipment])
+              }}
+            />
+
             <Card>
               <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle>Current Equipment</CardTitle>
@@ -452,7 +462,6 @@ function UpgradeAnalysisContent() {
                     ))}
                   </div>
                 )}
-
               </CardContent>
             </Card>
             <div className="flex justify-between">
@@ -477,6 +486,14 @@ function UpgradeAnalysisContent() {
 
         {step === 3 && (
           <div className="space-y-6">
+            {/* CSV Upload Component for Proposed Equipment */}
+            <CSVUpload
+              equipmentType="proposed"
+              onEquipmentImported={(importedEquipment) => {
+                setProposedEquipment((prev) => [...prev, ...importedEquipment])
+              }}
+            />
+
             <Card>
               <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle>Proposed Equipment</CardTitle>
@@ -522,7 +539,6 @@ function UpgradeAnalysisContent() {
                   Generate Analysis
                 </Button>
               </div>
-
             </div>
           </div>
         )}
