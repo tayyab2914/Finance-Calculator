@@ -422,7 +422,7 @@ function DashboardContent() {
                       <td className="py-3 px-2">
                         <div className="flex items-center justify-center gap-1">
                           <Link href={`/analysis/${analysis.id}`}>
-                            <Button variant="outline" size="sm" className="h-8 px-2 bg-transparent">
+                            <Button variant="outline" size="sm" className="h-8 px-2 bg-transparent" title="View analysis">
                               <Eye className="w-3 h-3" />
                             </Button>
                           </Link>
@@ -446,6 +446,7 @@ function DashboardContent() {
                             onClick={() => handleDeleteAnalysis(analysis.id)}
                             disabled={deletingId === analysis.id}
                             className="h-8 px-2 text-red-600 hover:text-red-700 hover:bg-red-50"
+                            title="Delete analysis"
                           >
                             {deletingId === analysis.id ? (
                               <Loader2 className="w-3 h-3 animate-spin" />
