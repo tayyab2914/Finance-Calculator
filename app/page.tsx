@@ -29,8 +29,8 @@ export default function HomePage() {
               Printer Upgrade Decisions, <span className="text-primary animate-float">Simplified</span>
             </h1>
             <p className="text-xl text-muted-foreground max-w-3xl mx-auto mb-8 leading-relaxed animate-fade-in-up animation-delay-400">
-              Powerful financial tools that reveal the true cost of upgrading—or not upgrading—digital printing equipment,
-              helping users decide with confidence and enabling sales consultants to win more business.
+              Powerful financial tools that reveal the true cost of upgrading—or not upgrading—digital printing
+              equipment, helping users decide with confidence and enabling sales consultants to win more business.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-12 animate-fade-in-up animation-delay-600">
               <Link href="/auth/signup">
@@ -108,8 +108,8 @@ export default function HomePage() {
                 </div>
                 <CardTitle className="text-xl mb-3">Settlement Calculator</CardTitle>
                 <CardDescription className="text-base leading-relaxed">
-                  Quickly calculate lease settlements with precision. Handle complex scenarios and provide accurate
-                  financial projections.
+                  Calculate lease settlements with NPV and RxP options, plus IRR analysis. Handle complex scenarios with
+                  precision.
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -129,19 +129,19 @@ export default function HomePage() {
                 <div className="mx-auto w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300">
                   <Wrench className="w-8 h-8 text-primary" />
                 </div>
-                <CardTitle className="text-xl mb-3">Financial Tools</CardTitle>
+                <CardTitle className="text-xl mb-3">ROI Calculator</CardTitle>
                 <CardDescription className="text-base leading-relaxed">
-                  Access a comprehensive suite of financial calculators and analysis tools designed specifically for
-                  equipment professionals.
+                  Calculate return on investment for companies and sales professionals. Understand the value of your
+                  Upgrr subscription.
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <Link href="/tools">
+                <Link href="/roi-calculator">
                   <Button
                     variant="outline"
                     className="w-full border-primary/20 hover:bg-primary/5 bg-transparent transform hover:scale-105 transition-all duration-300"
                   >
-                    Explore Tools
+                    Calculate ROI
                   </Button>
                 </Link>
               </CardContent>
@@ -429,6 +429,14 @@ export default function HomePage() {
                     className="text-muted-foreground hover:text-primary transition-colors duration-300"
                   >
                     Settlement Calculator
+                  </Link>
+                </li>
+                <li>
+                  <Link
+                    href="/roi-calculator"
+                    className="text-muted-foreground hover:text-primary transition-colors duration-300"
+                  >
+                    ROI Calculator
                   </Link>
                 </li>
                 <li>
