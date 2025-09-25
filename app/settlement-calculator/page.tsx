@@ -475,6 +475,14 @@ export default function SettlementCalculatorPage() {
                         {getEscalationsAhead() > 0 && ` Total escalations: ${getEscalationsAhead()}`}
                       </p>
                     </div>
+
+                    <div className="bg-amber-50 p-4 rounded-lg border border-amber-200">
+                      <h4 className="font-medium text-amber-900 mb-2">Payment Calculation Note:</h4>
+                      <p className="text-sm text-amber-800">
+                        All settlement payments are calculated in arrears, meaning payments are due at the end of each
+                        period.
+                      </p>
+                    </div>
                   </div>
                 ) : (
                   <div className="text-center py-12 text-gray-500">
@@ -490,6 +498,60 @@ export default function SettlementCalculatorPage() {
                     <p className="text-sm text-purple-700">
                       This is the effective interest rate charged by the bank based on the settlement amount and
                       remaining lease payments.
+                    </p>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <div className="text-center p-4 bg-blue-50 rounded-lg">
+                      <div className="text-2xl font-bold text-blue-600 mb-1">
+                        $
+                        {irrData.actualSettlement.toLocaleString("en-US", {
+                          minimumFractionDigits: 2,
+                          maximumFractionDigits: 2,
+                        })}
+                      </div>
+                      <p className="text-sm text-blue-800">Settlement Amount</p>
+                    </div>
+
+                    <div className="text-center p-4 bg-green-50 rounded-lg">
+                      <div className="text-2xl font-bold text-green-600 mb-1">
+                        $
+                        {irrData.leaseAmount.toLocaleString("en-US", {
+                          minimumFractionDigits: 2,
+                          maximumFractionDigits: 2,
+                        })}
+                      </div>
+                      <p className="text-sm text-green-800">Monthly Lease Amount</p>
+                    </div>
+
+                    <div className="text-center p-4 bg-gray-50 rounded-lg">
+                      <div className="text-2xl font-bold text-gray-600 mb-1">{irrData.periodRemaining}</div>
+                      <p className="text-sm text-gray-600">Remaining Payments</p>
+                    </div>
+
+                    <div className="text-center p-4 bg-orange-50 rounded-lg">
+                      <div className="text-2xl font-bold text-orange-600 mb-1">
+                        {Math.floor((irrData.periodRemaining - 1) / 12)}
+                      </div>
+                      <p className="text-sm text-orange-800">Escalations Ahead</p>
+                    </div>
+                  </div>
+
+                  <div className="bg-blue-50 p-4 rounded-lg">
+                    <h4 className="font-medium text-blue-900 mb-2">Escalation Logic:</h4>
+                    <p className="text-sm text-blue-800">
+                      {irrData.periodRemaining % 12 === 0 ? 12 : irrData.periodRemaining % 12} payments at current rate,
+                      then escalation every 12 months thereafter.
+                      {Math.floor((irrData.periodRemaining - 1) / 12) > 0 &&
+                        ` Total escalations: ${Math.floor((irrData.periodRemaining - 1) / 12)}`}
+                    </p>
+                  </div>
+
+                  <div className="bg-amber-50 p-4 rounded-lg border border-amber-200">
+                    <h4 className="font-medium text-amber-900 mb-2">Payment Calculation Note:</h4>
+                    <p className="text-sm text-amber-800">
+                      All settlement payments are calculated in arrears, meaning payments are due at the end of each
+                      period.
                     </p>
                   </div>
                 </div>
