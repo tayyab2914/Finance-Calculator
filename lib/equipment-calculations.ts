@@ -391,9 +391,9 @@ export function calculateUnifiedVolumeTotals(equipment: Equipment[]): { black: n
   const totals = { black: 0, color: 0 }
 
   equipment.forEach((eq) => {
-    totals.black += getUnifiedVolume(eq, "black")
+    totals.black += Number(getUnifiedVolume(eq, "black"))
     if (eq.type === "color") {
-      totals.color += getUnifiedVolume(eq, "color")
+      totals.color += Number(getUnifiedVolume(eq, "color"))
     }
   })
 
