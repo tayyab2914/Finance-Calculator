@@ -19,7 +19,7 @@ export const SUBSCRIPTION_PLANS = {
   MONTHLY: {
     name: "Monthly Pro",
     description: "Full access to all features",
-    price: 29.99,
+    price: 20.00,
     // This is safe because it's public
     priceId: process.env.NEXT_PUBLIC_STRIPE_MONTHLY_PRICE_ID || "",
     features: [
