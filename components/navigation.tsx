@@ -150,7 +150,7 @@ export function Navigation() {
                       </Link>
                     </DropdownMenuItem>
                     <DropdownMenuItem asChild>
-                      <Link href="/pricing" className="flex items-center gap-2">
+                      <Link href="/subscription" className="flex items-center gap-2">
                         <CreditCard className="w-4 h-4" />
                         Subscription
                       </Link>
