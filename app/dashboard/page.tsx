@@ -16,10 +16,11 @@ import {
   updateAnalysisStatus,
   type SavedAnalysis,
 } from "@/lib/database"
-import { Loader2, Plus, Search, Trash2, Eye, Filter, SortAsc, Copy } from "lucide-react"
+import { Loader2, Plus, Search, Trash2, Eye, Filter, SortAsc, Copy, Users, MessageSquare } from "lucide-react"
 import Link from "next/link"
 import { SubscriptionStatus } from "@/components/subscription-status"
 import { SubscriptionGuard } from "@/components/subscription-guard"
+import { FeedbackButton } from "@/components/feedback-button"
 
 export default function DashboardPage() {
   return (
@@ -209,7 +210,7 @@ function DashboardContent() {
 
       <SubscriptionGuard>
         {/* Quick Actions */}
-        <div className="grid gap-6 md:grid-cols-3 mb-8">
+        <div className="grid gap-6 md:grid-cols-3 lg:grid-cols-4 mb-8">
           <Card>
             <CardHeader>
               <CardTitle className="text-lg">New Analysis</CardTitle>
@@ -237,12 +238,33 @@ function DashboardContent() {
 
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg">Recent Activity</CardTitle>
-              <CardDescription>Last analysis update</CardDescription>
+              <CardTitle className="text-lg">Refer Friends</CardTitle>
+              <CardDescription>Earn free months for referrals</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="text-sm text-gray-600">
-                {analyses.length > 0 ? formatDate(analyses[0].updated_at) : "No analyses yet"}
+              <Link href="/referrals">
+                <Button className="w-full bg-transparent" variant="outline">
+                  <Users className="w-4 h-4 mr-2" />
+                  View Referrals
+                </Button>
+              </Link>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">Give Feedback</CardTitle>
+              <CardDescription>Help us improve Upgrr</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2">
+                <Link href="/feedback">
+                  <Button className="w-full bg-transparent" variant="outline">
+                    <MessageSquare className="w-4 h-4 mr-2" />
+                    View Feedback
+                  </Button>
+                </Link>
+                <FeedbackButton variant="outline" size="sm" className="w-full" />
               </div>
             </CardContent>
           </Card>

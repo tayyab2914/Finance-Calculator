@@ -11,7 +11,13 @@ interface AuthContextType {
   user: User | null
   session: Session | null
   loading: boolean
-  signUp: (email: string, password: string, fullName: string, companyName: string) => Promise<void>
+  signUp: (
+    email: string,
+    password: string,
+    fullName: string,
+    companyName: string,
+    referralCode?: string | null,
+  ) => Promise<void>
   signIn: (email: string, password: string) => Promise<void>
   signOut: () => Promise<void>
   updateProfile: (profileData: {
@@ -67,7 +73,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (event, session) => {
-      
       console.log("⚡ Auth state changed:", event, session)
 
       setSession(session)
@@ -81,8 +86,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, [router])
 
-  const signUp = async (email: string, password: string, fullName: string, companyName: string) => {
-    console.log("📝 Signing up:", email, fullName, companyName)
+  const signUp = async (
+    email: string,
+    password: string,
+    fullName: string,
+    companyName: string,
+    referralCode?: string | null,
+  ) => {
+    console.log(
+      "📝 Signing up:",
+      email,
+      fullName,
+      companyName,
+      referralCode ? `with referral: ${referralCode}` : "no referral",
+    )
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
@@ -117,6 +134,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const err = await res.json().catch(() => ({}))
         console.error("❌ Profile API error:", err.error || res.statusText)
         // Decide whether to throw or continue
+      }
+
+      if (referralCode) {
+        try {
+          const res = await fetch("/api/referrals/create", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ referralCode, refereeEmail: data.user.email }),
+          })
+          const result = await res.json()
+          if (res.ok) {
+            console.log("✅ Referral created:", result.referral.id)
+          } else {
+            console.warn("⚠️ Referral creation failed:", result.error)
+          }
+        } catch (err) {
+          console.error("❌ Referral creation error:", err)
+        }
       }
 
 

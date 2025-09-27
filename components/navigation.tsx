@@ -12,7 +12,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { User, LogOut, Settings, CreditCard } from "lucide-react"
+import { User, LogOut, Settings, CreditCard, Users, MessageSquare } from "lucide-react"
 import { useEffect, useState } from "react"
 import { getUserProfile } from "@/lib/database"
 import Image from "next/image"
@@ -57,6 +57,8 @@ export function Navigation() {
     { href: "/upgrade-analysis", label: "Upgrade Analysis" },
     { href: "/settlement-calculator", label: "Settlement Calculator" },
     { href: "/tools", label: "Tools" },
+    { href: "/referrals", label: "Referrals" },
+    { href: "/feedback", label: "Feedback" },
   ]
 
   const navItems = user ? authenticatedNavItems : publicNavItems
@@ -153,6 +155,18 @@ export function Navigation() {
                       <Link href="/subscription" className="flex items-center gap-2">
                         <CreditCard className="w-4 h-4" />
                         Subscription
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link href="/referrals" className="flex items-center gap-2">
+                        <Users className="w-4 h-4" />
+                        Referrals
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link href="/feedback" className="flex items-center gap-2">
+                        <MessageSquare className="w-4 h-4" />
+                        Feedback
                       </Link>
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
