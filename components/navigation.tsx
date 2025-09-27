@@ -12,15 +12,18 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { User, LogOut, Settings } from "lucide-react"
+import { User, LogOut, Settings, CreditCard } from "lucide-react"
 import { useEffect, useState } from "react"
 import { getUserProfile } from "@/lib/database"
 import Image from "next/image"
+import { useSubscription } from "@/hooks/use-subscription"
+import { Badge } from "@/components/ui/badge"
 
 export function Navigation() {
   const pathname = usePathname()
   const { user, signOut } = useAuth()
   const [profile, setProfile] = useState<any>(null)
+  const { isTrialing, trialDaysLeft, isActive, isPastDue } = useSubscription()
 
   useEffect(() => {
     if (user) {
@@ -43,6 +46,7 @@ export function Navigation() {
 
   const publicNavItems = [
     { href: "/", label: "Home" },
+    { href: "/pricing", label: "Pricing" },
     { href: "/auth/login", label: "Upgrade Analysis" },
     { href: "/settlement-calculator", label: "Settlement Calculator" },
     { href: "/tools", label: "Tools" },
@@ -61,17 +65,46 @@ export function Navigation() {
     await signOut()
   }
 
+  const getSubscriptionBadge = () => {
+    if (!user) return null
+
+    if (isTrialing && trialDaysLeft > 0) {
+      return (
+        <Badge variant="secondary" className="ml-2 text-xs bg-blue-100 text-blue-800">
+          Trial: {trialDaysLeft}d left
+        </Badge>
+      )
+    }
+
+    if (isActive) {
+      return (
+        <Badge variant="default" className="ml-2 text-xs bg-green-100 text-green-800">
+          Pro
+        </Badge>
+      )
+    }
+
+    if (isPastDue) {
+      return (
+        <Badge variant="destructive" className="ml-2 text-xs">
+          Past Due
+        </Badge>
+      )
+    }
+
+    return (
+      <Badge variant="outline" className="ml-2 text-xs">
+        Free
+      </Badge>
+    )
+  }
+
   return (
     <nav className="bg-white shadow-sm border-b">
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-16">
           <Link href={user ? "/dashboard" : "/"} className="font-bold text-xl text-primary">
-            <Image
-              src="/logo.png"
-              alt="Logo"
-              width={150}
-              height={40}
-            />
+            <Image src="/logo.png" alt="Logo" width={150} height={40} />
           </Link>
 
           <div className="flex items-center space-x-8">
@@ -91,35 +124,45 @@ export function Navigation() {
             </div>
 
             {user ? (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" className="flex items-center gap-2">
-                    {profile?.company_logo_url ? (
-                      <img
-                        src={profile.company_logo_url || "/placeholder.svg"}
-                        alt="Profile"
-                        className="w-8 h-8 rounded-full object-cover border"
-                      />
-                    ) : (
-                      <User className="w-5 h-5 text-gray-600" />
-                    )}
-                    <span className="hidden sm:inline">{user.user_metadata?.full_name || user.email}</span>
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-56">
-                  <DropdownMenuItem asChild>
-                    <Link href="/profile" className="flex items-center gap-2">
-                      <Settings className="w-4 h-4" />
-                      Profile Settings
-                    </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={handleSignOut} className="flex items-center gap-2 text-red-600">
-                    <LogOut className="w-4 h-4" />
-                    Sign Out
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+              <div className="flex items-center gap-2">
+                {getSubscriptionBadge()}
+
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" className="flex items-center gap-2">
+                      {profile?.company_logo_url ? (
+                        <img
+                          src={profile.company_logo_url || "/placeholder.svg"}
+                          alt="Profile"
+                          className="w-8 h-8 rounded-full object-cover border"
+                        />
+                      ) : (
+                        <User className="w-5 h-5 text-gray-600" />
+                      )}
+                      <span className="hidden sm:inline">{user.user_metadata?.full_name || user.email}</span>
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-56">
+                    <DropdownMenuItem asChild>
+                      <Link href="/profile" className="flex items-center gap-2">
+                        <Settings className="w-4 h-4" />
+                        Profile Settings
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link href="/subscription" className="flex items-center gap-2">
+                        <CreditCard className="w-4 h-4" />
+                        Subscription
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={handleSignOut} className="flex items-center gap-2 text-red-600">
+                      <LogOut className="w-4 h-4" />
+                      Sign Out
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
             ) : (
               <div className="flex items-center gap-4">
                 <Link href="/auth/login">

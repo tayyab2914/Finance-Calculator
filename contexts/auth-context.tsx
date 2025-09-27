@@ -5,6 +5,7 @@ import { createContext, useContext, useEffect, useState, useRef } from "react"
 import type { User, Session } from "@supabase/supabase-js"
 import { supabase } from "@/lib/supabase"
 import { useRouter, usePathname } from "next/navigation"
+import { createTrialSubscription } from "@/lib/subscription-utils"
 
 interface AuthContextType {
   user: User | null
@@ -99,6 +100,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     if (data.user) {
       console.log("✅ User created:", data.user)
+
       const { error: profileError } = await supabase.from("profiles").insert({
         id: data.user.id,
         email: data.user.email!,
@@ -106,11 +108,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         company_name: companyName,
         default_discount_rate: 8, // Default 8%
         currency_symbol: "$", // Default USD
+        subscription_status: "trialing", // Start with trial
       })
 
       if (profileError) {
         console.error("❌ Profile creation error:", profileError)
         throw profileError
+      }
+
+      try {
+        // Wait a moment for the session to be established
+        await new Promise((resolve) => setTimeout(resolve, 1000))
+        await createTrialSubscription(data.user.id)
+        console.log("✅ Trial subscription created for user:", data.user.id)
+      } catch (subscriptionError) {
+        console.error("❌ Trial subscription creation error:", subscriptionError)
+        // Don't throw here - user can still use the app, just log the error
       }
     }
   }
