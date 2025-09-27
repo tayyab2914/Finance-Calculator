@@ -41,7 +41,7 @@ export function useSubscription(): SubscriptionStatus {
     if (!user) return
 
     try {
-      setIsLoading(true)
+      // setIsLoading(true)
       setError(null)
 
       const { data, error: fetchError } = await supabase

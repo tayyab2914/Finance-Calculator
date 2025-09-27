@@ -67,6 +67,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (event, session) => {
+      
       console.log("⚡ Auth state changed:", event, session)
 
       setSession(session)
@@ -101,20 +102,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (data.user) {
       console.log("✅ User created:", data.user)
 
-      const { error: profileError } = await supabase.from("profiles").insert({
-        id: data.user.id,
-        email: data.user.email!,
-        full_name: fullName,
-        company_name: companyName,
-        default_discount_rate: 8, // Default 8%
-        currency_symbol: "$", // Default USD
-        subscription_status: "trialing", // Start with trial
+      const res = await fetch("/api/create-profile", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: data.user.id,
+          email: data.user.email,
+          fullName,
+          companyName,
+        }),
       })
 
-      if (profileError) {
-        console.error("❌ Profile creation error:", profileError)
-        throw profileError
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}))
+        console.error("❌ Profile API error:", err.error || res.statusText)
+        // Decide whether to throw or continue
       }
+
 
       try {
         // Wait a moment for the session to be established

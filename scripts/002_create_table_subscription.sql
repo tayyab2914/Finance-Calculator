@@ -47,3 +47,51 @@ CREATE TRIGGER update_subscriptions_updated_at
   BEFORE UPDATE ON subscriptions
   FOR EACH ROW
   EXECUTE FUNCTION update_updated_at_column();
+
+
+-- Add subscription-related fields to profiles table
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS subscription_status TEXT DEFAULT 'trialing' CHECK (subscription_status IN ('trialing', 'active', 'past_due', 'canceled', 'unpaid', 'incomplete', 'incomplete_expired'));
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS trial_ends_at TIMESTAMPTZ;
+
+-- Create function to sync subscription status from subscriptions table
+CREATE OR REPLACE FUNCTION sync_profile_subscription_status()
+RETURNS TRIGGER AS $$
+BEGIN
+  -- Update the profile with the latest subscription status
+  UPDATE profiles 
+  SET 
+    subscription_status = NEW.status,
+    trial_ends_at = NEW.trial_end,
+    updated_at = NOW()
+  WHERE id = NEW.user_id;
+  
+  RETURN NEW;
+END;
+$$ language 'plpgsql';
+
+-- Create trigger to sync subscription status to profiles
+CREATE TRIGGER sync_subscription_status_to_profile
+  AFTER INSERT OR UPDATE ON subscriptions
+  FOR EACH ROW
+  EXECUTE FUNCTION sync_profile_subscription_status();
+
+
+INSERT INTO public.subscriptions (
+    user_id,
+    status,
+    trial_end,
+    current_period_start,
+    current_period_end
+)
+SELECT
+    p.id,
+    'trialing',
+    NOW() + INTERVAL '14 days',
+    NOW(),                      -- optional: mark trial start as now
+    NOW() + INTERVAL '14 days'   -- optional: set same as trial_end
+FROM public.profiles p
+WHERE NOT EXISTS (
+    SELECT 1
+    FROM public.subscriptions s
+    WHERE s.user_id = p.id
+);

@@ -37,6 +37,8 @@ CREATE TABLE IF NOT EXISTS public.analyses (
     current_equipment JSONB NOT NULL,
     proposed_equipment JSONB NOT NULL,
     analysis_settings JSONB NOT NULL,
+    status VARCHAR(20) DEFAULT 'New'
+        CHECK (status IN ('New', 'Sent', 'Approved', 'Lost')),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
