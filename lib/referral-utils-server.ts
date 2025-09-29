@@ -53,7 +53,7 @@ export async function completeReferral(refereeUserId: string): Promise<void> {
   }
 }
 
-// Grant referral reward (extend subscription by 1 month)
+// Grant referral reward (extend subscription by 1 month) to BOTH referrer and referee
 export async function grantReferralReward(referralId: string): Promise<void> {
   const { data: referral, error: referralError } = await supabase
     .from("referrals")
@@ -67,31 +67,34 @@ export async function grantReferralReward(referralId: string): Promise<void> {
     throw new Error("Referral not found or already rewarded")
   }
 
-  // Get referrer's current subscription
-  const { data: subscription, error: subError } = await supabase
-    .from("subscriptions")
-    .select("*")
-    .eq("user_id", referral.referrer_id)
-    .single()
+  // Helper to extend a user's subscription by 1 month
+  async function extendSubscription(userId: string) {
+    const { data: subscription, error: subError } = await supabase
+      .from("subscriptions")
+      .select("*")
+      .eq("user_id", userId)
+      .single()
 
-  if (subError || !subscription) {
-    throw new Error("Referrer subscription not found")
+    if (subError || !subscription) {
+      throw new Error(`Subscription not found for user ${userId}`)
+    }
+
+    const currentEndDate = new Date(subscription.current_period_end)
+    const newEndDate = new Date(currentEndDate.setMonth(currentEndDate.getMonth() + 1))
+
+    const { error: updateSubError } = await supabase
+      .from("subscriptions")
+      .update({ current_period_end: newEndDate.toISOString() })
+      .eq("id", subscription.id)
+
+    if (updateSubError) {
+      throw new Error(`Failed to extend subscription for ${userId}: ${updateSubError.message}`)
+    }
   }
 
-  // Extend subscription by 1 month
-  const currentEndDate = new Date(subscription.current_period_end)
-  const newEndDate = new Date(currentEndDate.setMonth(currentEndDate.getMonth() + 1))
-
-  const { error: updateSubError } = await supabase
-    .from("subscriptions")
-    .update({
-      current_period_end: newEndDate.toISOString(),
-    })
-    .eq("id", subscription.id)
-
-  if (updateSubError) {
-    throw new Error(`Failed to extend subscription: ${updateSubError.message}`)
-  }
+  // ✅ Extend both referrer and referee
+  await extendSubscription(referral.referrer_id)
+  await extendSubscription(referral.referee_id) // <-- new addition
 
   // Mark referral as rewarded
   const { error: updateReferralError } = await supabase
@@ -107,10 +110,11 @@ export async function grantReferralReward(referralId: string): Promise<void> {
   }
 
   // Update referrer's reward count
+  const referrerProfile = await getUserProfile(referral.referrer_id)
   const { error: profileError } = await supabase
     .from("profiles")
     .update({
-      referral_rewards_earned: (await getUserProfile(referral.referrer_id))?.referral_rewards_earned + 1 || 1,
+      referral_rewards_earned: (referrerProfile?.referral_rewards_earned || 0) + 1,
     })
     .eq("id", referral.referrer_id)
 
