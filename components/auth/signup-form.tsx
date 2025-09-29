@@ -14,6 +14,7 @@ import Link from "next/link"
 import { useSearchParams } from "next/navigation"
 import { validateReferralCode } from "@/lib/referral-utils"
 
+
 export function SignupForm() {
   const { signUp } = useAuth()
   const searchParams = useSearchParams()
