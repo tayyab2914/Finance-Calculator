@@ -1,6 +1,7 @@
 "use client"
 
 import type React from "react"
+
 import { useState, useEffect } from "react"
 import { useAuth } from "@/contexts/auth-context"
 import { Button } from "@/components/ui/button"
@@ -29,23 +30,14 @@ export function SignupForm() {
   const [referralCode, setReferralCode] = useState("")
   const [referralCodeValid, setReferralCodeValid] = useState<boolean | null>(null)
   const [validatingReferral, setValidatingReferral] = useState(false)
-  const [isClient, setIsClient] = useState(false)
 
-  // Set client-side flag
   useEffect(() => {
-    setIsClient(true)
-  }, [])
-
-  // Only access searchParams on client side
-  useEffect(() => {
-    if (isClient) {
-      const refParam = searchParams?.get("ref")
-      if (refParam) {
-        setReferralCode(refParam)
-        validateReferralCodeAsync(refParam)
-      }
+    const refParam = searchParams.get("ref")
+    if (refParam) {
+      setReferralCode(refParam)
+      validateReferralCodeAsync(refParam)
     }
-  }, [isClient, searchParams])
+  }, [searchParams])
 
   const validateReferralCodeAsync = async (code: string) => {
     if (!code.trim()) {
@@ -108,19 +100,6 @@ export function SignupForm() {
     } finally {
       setLoading(false)
     }
-  }
-
-  // Show loading state while checking client-side
-  if (!isClient) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-        <Card className="w-full max-w-md">
-          <CardContent className="flex justify-center items-center p-6">
-            <Loader2 className="h-6 w-6 animate-spin" />
-          </CardContent>
-        </Card>
-      </div>
-    )
   }
 
   if (success) {
