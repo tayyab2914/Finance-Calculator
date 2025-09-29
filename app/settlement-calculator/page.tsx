@@ -210,11 +210,10 @@ export default function SettlementCalculatorPage() {
 
     // Add monthly payments with escalation
     for (let month = 1; month <= irrData.periodRemaining; month++) {
-      const escalationCount = Math.floor((month - 1) / 12)
+      const { escalationCount, escalationApplied } = calculateEscalation(month, irrData.periodRemaining)
       const escalatedAmount = irrData.leaseAmount * Math.pow(1 + irrData.escalation / 100, escalationCount)
       cashFlows.push(escalatedAmount)
     }
-
     const irr = calculateIRR(cashFlows)
     setIrrResult(irr)
   }
