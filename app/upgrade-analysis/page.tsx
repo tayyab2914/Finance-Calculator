@@ -9,8 +9,8 @@ import { AnalysisResults } from "@/components/analysis-results"
 import { Plus } from "lucide-react"
 import { useAuth } from "@/contexts/auth-context"
 import { getUserProfile } from "@/lib/database"
-import { ProtectedRoute } from "@/components/auth/protected-route"
 import { CSVUpload } from "@/components/csv-upload"
+import { AccessGuard } from "@/components/auth/access-guard"
 
 export interface ClientDetails {
   companyName: string
@@ -568,8 +568,8 @@ function UpgradeAnalysisContent() {
 
 export default function UpgradeAnalysisPage() {
   return (
-    <ProtectedRoute>
+    <AccessGuard>
       <UpgradeAnalysisContent />
-    </ProtectedRoute>
+    </AccessGuard>
   )
 }
