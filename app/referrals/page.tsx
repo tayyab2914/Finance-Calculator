@@ -46,7 +46,7 @@ function ReferralsContent() {
   const [stats, setStats] = useState<ReferralStats | null>(null)
   const [referrals, setReferrals] = useState<Referral[]>([])
   const [loading, setLoading] = useState(true)
-  const [copying, setCopying] = useState(false)
+  const [copied, setCopied] = useState(false)
 
   useEffect(() => {
     if (user) {
@@ -56,7 +56,7 @@ function ReferralsContent() {
 
   const loadReferralData = async () => {
     try {
-      setLoading(true)
+      // setLoading(true)
       const [link, statsData, referralsData] = await Promise.all([
         generateReferralLink(user!.id),
         getUserReferralStats(user!.id),
@@ -78,24 +78,27 @@ function ReferralsContent() {
     }
   }
 
-  const copyReferralLink = async () => {
-    try {
-      setCopying(true)
-      await navigator.clipboard.writeText(referralLink)
-      toast({
-        title: "Copied!",
-        description: "Referral link copied to clipboard",
-      })
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to copy link. Please try again.",
-        variant: "destructive",
-      })
-    } finally {
-      setCopying(false)
-    }
+const copyReferralLink = async () => {
+  try {
+    await navigator.clipboard.writeText(referralLink)
+    setCopied(true)
+
+    toast({
+      title: "Copied!",
+      description: "Referral link copied to clipboard",
+    })
+
+    // reset back to "Copy" after 3 seconds
+    setTimeout(() => setCopied(false), 3000)
+  } catch (error) {
+    toast({
+      title: "Error",
+      description: "Failed to copy link. Please try again.",
+      variant: "destructive",
+    })
   }
+}
+
 
   const shareViaEmail = () => {
     const subject = "Join me on Upgrr - Equipment Analysis Made Easy"
@@ -267,9 +270,9 @@ function ReferralsContent() {
             <CardContent className="space-y-4">
               <div className="flex gap-2">
                 <Input value={referralLink} readOnly className="font-mono text-sm" />
-                <Button onClick={copyReferralLink} disabled={copying} variant="outline">
+                <Button onClick={copyReferralLink} variant="outline">
                   <Copy className="h-4 w-4 mr-2" />
-                  {copying ? "Copying..." : "Copy"}
+                  {copied ? "Copied" : "Copy"}
                 </Button>
               </div>
 
