@@ -27,6 +27,7 @@ CREATE TABLE IF NOT EXISTS public.profiles (
     currency_symbol TEXT DEFAULT '$',
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+    is_admin BOOLEAN DEFAULT FALSE
 );
 
 CREATE TABLE IF NOT EXISTS public.analyses (

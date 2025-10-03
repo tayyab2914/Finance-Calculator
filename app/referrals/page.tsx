@@ -18,8 +18,10 @@ import {
   CheckCircle,
   Mail,
   Facebook,
-  Twitter,
+  // Remove Twitter import if there is an X icon instead
+  // import XIcon (if available) or use a generic icon
   Linkedin,
+  XIcon,
 } from "lucide-react"
 import {
   generateReferralLink,
@@ -107,12 +109,16 @@ function ReferralsContent() {
     const url = referralLink
 
     const shareUrls = {
-      twitter: `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`,
+      // use X’s share / intent URL format
+      x: `https://x.com/intent/post?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`,
       facebook: `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`,
       linkedin: `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(url)}`,
     }
 
-    window.open(shareUrls[platform as keyof typeof shareUrls], "_blank", "width=600,height=400")
+    // fallback for legacy “twitter” key
+    const key = platform === "twitter" ? "x" : platform
+
+    window.open(shareUrls[key as keyof typeof shareUrls], "_blank", "width=600,height=400")
   }
 
   const getStatusBadge = (status: string) => {
@@ -272,9 +278,10 @@ function ReferralsContent() {
                   <Mail className="h-4 w-4 mr-2" />
                   Email
                 </Button>
-                <Button onClick={() => shareOnSocial("twitter")} variant="outline" size="sm">
-                  <Twitter className="h-4 w-4 mr-2" />
-                  Twitter
+                <Button onClick={() => shareOnSocial("x")} variant="outline" size="sm">
+                  {/* replace icon with X icon if available */}
+                  <img src="/xicon.svg" className="h-4 w-4 mr-2" alt="X" />
+                  X
                 </Button>
                 <Button onClick={() => shareOnSocial("facebook")} variant="outline" size="sm">
                   <Facebook className="h-4 w-4 mr-2" />

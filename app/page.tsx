@@ -479,8 +479,14 @@ export default function HomePage() {
 
           <div className="border-t border-border pt-8 animate-fade-in-up animation-delay-600">
             <div className="flex flex-col md:flex-row justify-between items-center">
-              <p className="text-muted-foreground text-sm">© 2024 Upgrr. All rights reserved.</p>
+              <p className="text-muted-foreground text-sm">© 2025 Upgrr. All rights reserved.</p>
               <p className="text-muted-foreground text-sm mt-4 md:mt-0">Made with ❤️ for the equipment industry</p>
+            </div>
+            {/* Hidden admin access link: visible on focus only */}
+            <div className="mt-2">
+              <a href="/admin" className="sr-only focus:not-sr-only text-xs text-muted-foreground underline">
+                Admin
+              </a>
             </div>
           </div>
         </div>
