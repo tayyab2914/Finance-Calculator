@@ -51,11 +51,18 @@ export default function AdminHomePage() {
     <main className="max-w-7xl mx-auto p-6 space-y-6">
       <header className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">Admin Panel</h1>
-        <Link href="/dashboard">
-          <Button variant="outline" className="bg-transparent">
-            Back to App
-          </Button>
-        </Link>
+        <div className="flex items-center gap-3">
+          <Link href="/admin/analyses">
+            <Button variant="outline" className="bg-transparent">
+              View All Analyses
+            </Button>
+          </Link>
+          <Link href="/dashboard">
+            <Button variant="outline" className="bg-transparent">
+              Back to App
+            </Button>
+          </Link>
+        </div>
       </header>
 
       <Card>
