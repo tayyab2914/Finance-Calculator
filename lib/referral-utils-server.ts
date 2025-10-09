@@ -1,4 +1,6 @@
+import Stripe from "stripe"
 import { supabaseServer as supabase } from "./supabase-server"
+import { stripe } from "@/lib/stripe"
 
 
 // Complete a referral when the referee becomes a paying customer
@@ -53,6 +55,8 @@ export async function completeReferral(refereeUserId: string): Promise<void> {
   }
 }
 
+
+
 // Grant referral reward (extend subscription by 1 month) to BOTH referrer and referee
 export async function grantReferralReward(referralId: string): Promise<void> {
   const { data: referral, error: referralError } = await supabase
@@ -67,7 +71,7 @@ export async function grantReferralReward(referralId: string): Promise<void> {
     throw new Error("Referral not found or already rewarded")
   }
 
-  // Helper to extend a user's subscription by 1 month
+  // ✅ Helper: extend a user's Stripe subscription by 1 month
   async function extendSubscription(userId: string) {
     const { data: subscription, error: subError } = await supabase
       .from("subscriptions")
@@ -79,12 +83,26 @@ export async function grantReferralReward(referralId: string): Promise<void> {
       throw new Error(`Subscription not found for user ${userId}`)
     }
 
-    const currentEndDate = new Date(subscription.current_period_end)
-    const newEndDate = new Date(currentEndDate.setMonth(currentEndDate.getMonth() + 1))
+    const stripeSubId = subscription.stripe_subscription_id
+    if (!stripeSubId) {
+      throw new Error(`Stripe subscription not found for user ${userId}`)
+    }
 
+    // 🕓 Calculate new end date (+1 month)
+    const currentEnd = new Date(subscription.current_period_end)
+    const newEnd = new Date(currentEnd)
+    newEnd.setMonth(currentEnd.getMonth() + 1)
+
+    // ⚙️ Update Stripe subscription: delay next billing by 1 month
+    await stripe.instance.subscriptions.update(stripeSubId, {
+      billing_cycle_anchor: Math.floor(newEnd.getTime() / 1000) as unknown as Stripe.SubscriptionUpdateParams.BillingCycleAnchor,
+      proration_behavior: "none",
+    })
+
+    // 🗄️ Update Supabase record to match
     const { error: updateSubError } = await supabase
       .from("subscriptions")
-      .update({ current_period_end: newEndDate.toISOString() })
+      .update({ current_period_end: newEnd.toISOString() })
       .eq("id", subscription.id)
 
     if (updateSubError) {
@@ -93,10 +111,10 @@ export async function grantReferralReward(referralId: string): Promise<void> {
   }
 
   // ✅ Extend both referrer and referee
+  await extendSubscription(referral.referee_id)
   await extendSubscription(referral.referrer_id)
-  await extendSubscription(referral.referee_id) // <-- new addition
 
-  // Mark referral as rewarded
+  // ✅ Mark referral as rewarded
   const { error: updateReferralError } = await supabase
     .from("referrals")
     .update({
@@ -109,7 +127,7 @@ export async function grantReferralReward(referralId: string): Promise<void> {
     throw new Error(`Failed to mark referral as rewarded: ${updateReferralError.message}`)
   }
 
-  // Update referrer's reward count
+  // ✅ Increment reward count in profiles
   const referrerProfile = await getUserProfile(referral.referrer_id)
   const { error: profileError } = await supabase
     .from("profiles")
@@ -122,6 +140,7 @@ export async function grantReferralReward(referralId: string): Promise<void> {
     console.error("Failed to update referrer reward count:", profileError)
   }
 }
+
 
 
 

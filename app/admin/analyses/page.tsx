@@ -40,7 +40,12 @@ type Stats = {
   }
 }
 
-const fetcher = (url: string) => fetch(url).then((r) => r.json())
+const fetcher = (url: string) =>
+  fetch(url, { credentials: "include" }) // 👈 important!
+    .then((res) => {
+      if (!res.ok) throw new Error("Network response was not ok")
+      return res.json()
+    })
 
 export default function AdminAnalysesPage() {
   const { data, error, isLoading } = useSWR<{ analyses: AnalysisRow[]; stats: Stats }>("/api/admin/analyses", fetcher)

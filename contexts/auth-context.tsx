@@ -3,9 +3,11 @@
 import type React from "react"
 import { createContext, useContext, useEffect, useState, useRef } from "react"
 import type { User, Session } from "@supabase/supabase-js"
-import { supabase } from "@/lib/supabase"
+import { createClient } from "@/utils/supabase/client"
 import { useRouter, usePathname } from "next/navigation"
 import { createTrialSubscription } from "@/lib/subscription-utils"
+
+const supabase = createClient()
 
 interface AuthContextType {
   user: User | null
@@ -119,7 +121,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (data.user) {
       console.log("✅ User created:", data.user)
 
-      const res = await fetch("/api/create-profile", {
+      const res = await fetch("/api/auth/create-profile", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

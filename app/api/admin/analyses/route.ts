@@ -1,21 +1,26 @@
 import { NextResponse } from "next/server"
-import { createClient } from "@supabase/supabase-js"
+import { createClient } from "@/utils/supabase/server";
+import { requireAdmin } from "@/utils/supabase/auth-helpers";
+
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0
 
 export async function GET() {
-  // const auth = await requireAdmin()
-  // if (!auth.ok) return NextResponse.json({ error: auth.reason }, { status: auth.status })
-
-  const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!)
+  try {
+    const user = await requireAdmin()
+  } catch (err: any) {
+    console.error("❌ Internal server error:", err)
+    return NextResponse.json({ error: "Internal server error", details: err.message }, { status: 500 })
+  }
+  
+  const supabase = await createClient()
 
   const { data: analyses, error: analysesError } = await supabase
     .from("analyses")
     .select("id, title, status, created_at, updated_at, user_id, client_details")
     .order("updated_at", { ascending: false })
 
-  console.log(analyses)
 
   if (analysesError) {
     return NextResponse.json({ error: analysesError.message }, { status: 500 })

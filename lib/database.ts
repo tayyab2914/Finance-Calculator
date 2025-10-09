@@ -1,5 +1,6 @@
-import { supabase } from "./supabase"
+import { createClient } from "@/utils/supabase/client"
 import type { ClientDetails, Equipment } from "@/app/upgrade-analysis/page"
+const supabase = createClient()
 
 export interface SavedAnalysis {
   id: string

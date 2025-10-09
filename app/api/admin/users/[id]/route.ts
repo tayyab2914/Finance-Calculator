@@ -1,13 +1,23 @@
 import { NextResponse, type NextRequest } from "next/server"
-import { requireAdmin } from "@/lib/admin-auth"
-import { createClient } from "@supabase/supabase-js"
+import { requireAdmin } from "@/utils/supabase/auth-helpers";
+import { createClient } from "@/utils/supabase/server";
+
+export const dynamic = "force-dynamic";
+export const revalidate = 0
 
 export async function GET(_: NextRequest, { params }: { params: { id: string } }) {
-  // const auth = await requireAdmin()
-  // if (!auth.ok) return NextResponse.json({ error: auth.reason }, { status: auth.status })
+  try {
+    const user = await requireAdmin()
+  } catch (err: any) {
+    console.error("❌ Internal server error:", err)
+    return NextResponse.json({ error: "Internal server error", details: err.message }, { status: 500 })
+  }
+
+  const supabase = await createClient()
+
+
   const userId = params.id
 
-  const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!)
 
   const { data: profile, error: pErr } = await supabase.from("profiles").select("*").eq("id", userId).single()
   if (pErr) return NextResponse.json({ error: pErr.message }, { status: 404 })
@@ -36,8 +46,15 @@ export async function GET(_: NextRequest, { params }: { params: { id: string } }
 }
 
 export async function PATCH(request: NextRequest, { params }: { params: { id: string } }) {
-  // const auth = await requireAdmin()
-  // if (!auth.ok) return NextResponse.json({ error: auth.reason }, { status: auth.status })
+  try {
+    const user = await requireAdmin()
+  } catch (err: any) {
+    console.error("❌ Internal server error:", err)
+    return NextResponse.json({ error: "Internal server error", details: err.message }, { status: 500 })
+  }
+
+  const supabase = await createClient()
+
   const userId = params.id
   const body = await request.json()
 
@@ -58,7 +75,6 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
   }
   update.updated_at = new Date().toISOString()
 
-  const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!)
   const { data, error } = await supabase.from("profiles").update(update).eq("id", userId).select().single()
   if (error) return NextResponse.json({ error: error.message }, { status: 400 })
 

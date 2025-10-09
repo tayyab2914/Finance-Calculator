@@ -2,18 +2,17 @@ import { type NextRequest, NextResponse } from "next/server"
 import { createServerClient } from "@supabase/ssr"
 import { cookies } from "next/headers"
 import { cancelSubscription } from "@/lib/subscription-utils"
+import { requireUser } from "@/utils/supabase/auth-helpers"
+import { createClient } from "@/utils/supabase/server"
+
+
 
 export async function POST(request: NextRequest) {
-
-  const { userId } = await request.json()
   try {
-    const cookieStore = cookies()
-    const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!, 
-      { cookies: { get(name) { return cookieStore.get(name)?.value } } }
-    )
+    const user = await requireUser()
+    const userId  = user?.id
 
+    const supabase = await createClient()
     // ✅ Fetch subscription safely
     const { data: subscription, error, count } = await supabase
       .from("subscriptions")
