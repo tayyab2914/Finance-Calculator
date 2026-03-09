@@ -21,6 +21,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Button } from "@/components/ui/button"
+import { Checkbox } from "@/components/ui/checkbox"
 import {
   Download,
   ChevronDown,
@@ -35,6 +36,7 @@ import {
   User,
   MapPin,
   Info,
+  FileText,
 } from "lucide-react"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 import { Alert, AlertDescription } from "@/components/ui/alert"
@@ -48,6 +50,7 @@ import {
   calculateEquipmentCashFlow,
   type MonthlyBreakdown,
 } from "@/lib/equipment-calculations"
+import { generatePDFReport, triggerPDFPrint } from "@/lib/pdf-generator"
 
 interface AnalysisResultsProps {
   clientDetails: ClientDetails
@@ -112,7 +115,9 @@ export function AnalysisResults({
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
   const [saveSuccess, setSaveSuccess] = useState<string | null>(null)
-  const [analysisTitle, setAnalysisTitle] = useState<string>(savedAnalysisTitle ?? "");
+  const [analysisTitle, setAnalysisTitle] = useState<string>(savedAnalysisTitle ?? "")
+  const [includeDetailedTables, setIncludeDetailedTables] = useState(false)
+  const [exportingPDF, setExportingPDF] = useState(false)
   const discountOptions = ["6", "8", "10"]
 
   // If the current discountRateAnnual is not in options, add it
@@ -427,6 +432,41 @@ export function AnalysisResults({
     }
   }
 
+  const handleExportPDF = () => {
+    setExportingPDF(true)
+
+    try {
+      const pdfData = {
+        clientDetails,
+        currentEquipment,
+        proposedEquipment,
+        analysisYears,
+        discountRateAnnual,
+        currencySymbol,
+        currentNPV: analysisData.currentNPV,
+        proposedNPV: analysisData.proposedNPV,
+        npvSavings: analysisData.npvSavings,
+        totalCurrentCost: analysisData.totalCurrentCost,
+        totalProposedCost: analysisData.totalProposedCost,
+        firstMonthSavings: analysisData.firstMonthSavings,
+        firstMonthCurrent: analysisData.firstMonthCurrent,
+        firstMonthProposed: analysisData.firstMonthProposed,
+        paybackPeriodMonths: analysisData.paybackPeriodMonths,
+        analysisTitle,
+      }
+
+      const htmlContent = generatePDFReport(pdfData, includeDetailedTables)
+      triggerPDFPrint(htmlContent)
+    } catch (error) {
+      console.error("Failed to generate PDF:", error)
+      alert("Failed to generate PDF report. Please try again.")
+    } finally {
+      setTimeout(() => {
+        setExportingPDF(false)
+      }, 1000)
+    }
+  }
+
   const getEquipmentIcon = (equipment: Equipment) => {
     return equipment.type === "color" ? (
       <Monitor className="w-4 h-4 text-blue-600" />
@@ -561,8 +601,6 @@ export function AnalysisResults({
                       </div>
                     </div>
                   )}
-
-
                 </div>
               </div>
             </div>
@@ -670,7 +708,10 @@ export function AnalysisResults({
                         <Info className="w-4 h-4 text-muted-foreground cursor-pointer" />
                       </TooltipTrigger>
                       <TooltipContent>
-                        <p>This rate is usually the ruling CPI inflation rate. Another percentage that can be used is the User's Internal Cost of Capital rate</p>
+                        <p>
+                          This rate is usually the ruling CPI inflation rate. Another percentage that can be used is the
+                          User's Internal Cost of Capital rate
+                        </p>
                       </TooltipContent>
                     </UiTooltip>
                   </TooltipProvider>
@@ -690,9 +731,6 @@ export function AnalysisResults({
         </CardContent>
       </Card>
 
-
-
-
       <div className="results-table-container">
         <h2 className="text-xl font-bold mb-4">Results and Reports</h2>
         <table className="min-w-full border-collapse border border-gray-300">
@@ -709,17 +747,22 @@ export function AnalysisResults({
               <td className="border border-gray-300 px-4 py-2 font-semibold">NPV Totals</td>
               <td className="border border-gray-300 px-4 py-2 text-right text-red-600">
                 {currencySymbol}
-                {analysisData.currentNPV.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                {analysisData.currentNPV.toLocaleString("en-US", {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2,
+                })}
               </td>
               <td className="border border-gray-300 px-4 py-2 text-right text-blue-600">
                 {currencySymbol}
-                {analysisData.proposedNPV.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                {analysisData.proposedNPV.toLocaleString("en-US", {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2,
+                })}
               </td>
               <td
-                className={`border border-gray-300 px-4 py-2 text-right ${analysisData.npvSavings >= 0
-                  ? "bg-green-50 text-green-700"
-                  : "bg-red-50 text-red-700"
-                  }`}
+                className={`border border-gray-300 px-4 py-2 text-right ${
+                  analysisData.npvSavings >= 0 ? "bg-green-50 text-green-700" : "bg-red-50 text-red-700"
+                }`}
               >
                 <div className="flex items-center justify-end space-x-2">
                   <span className="text-lg font-extrabold">
@@ -731,58 +774,74 @@ export function AnalysisResults({
                   </span>
                 </div>
               </td>
-
             </tr>
             <tr>
               <td className="border border-gray-300 px-4 py-2 font-semibold">Gross Totals</td>
               <td className="border border-gray-300 px-4 py-2 text-right text-red-600">
                 {currencySymbol}
-                {analysisData.totalCurrentCost.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                {analysisData.totalCurrentCost.toLocaleString("en-US", {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2,
+                })}
               </td>
               <td className="border border-gray-300 px-4 py-2 text-right text-blue-600">
                 {currencySymbol}
-                {analysisData.totalProposedCost.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                {analysisData.totalProposedCost.toLocaleString("en-US", {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2,
+                })}
               </td>
-              <td className={`border border-gray-300 px-4 py-2 text-right font-bold ${(analysisData.totalCurrentCost - analysisData.totalProposedCost) >= 0 ? "text-green-600" : "text-red-600"}`}>
+              <td
+                className={`border border-gray-300 px-4 py-2 text-right font-bold ${(analysisData.totalCurrentCost - analysisData.totalProposedCost) >= 0 ? "text-green-600" : "text-red-600"}`}
+              >
                 {currencySymbol}
-                {Math.abs(analysisData.totalCurrentCost - analysisData.totalProposedCost).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                {Math.abs(analysisData.totalCurrentCost - analysisData.totalProposedCost).toLocaleString("en-US", {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2,
+                })}
               </td>
             </tr>
             <tr>
               <td className="border border-gray-300 px-4 py-2 font-semibold">1st Month</td>
               <td className="border border-gray-300 px-4 py-2 text-right text-red-600">
                 {currencySymbol}
-                {analysisData.firstMonthCurrent?.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) /* Assuming you have this */}
+                {
+                  analysisData.firstMonthCurrent?.toLocaleString("en-US", {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                  }) /* Assuming you have this */
+                }
               </td>
               <td className="border border-gray-300 px-4 py-2 text-right text-blue-600">
                 {currencySymbol}
-                {analysisData.firstMonthProposed?.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) /* Assuming you have this */}
+                {
+                  analysisData.firstMonthProposed?.toLocaleString("en-US", {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                  }) /* Assuming you have this */
+                }
               </td>
-              <td className={`border border-gray-300 px-4 py-2 text-right font-bold ${analysisData.firstMonthSavings >= 0 ? "text-green-600" : "text-red-600"}`}>
+              <td
+                className={`border border-gray-300 px-4 py-2 text-right font-bold ${analysisData.firstMonthSavings >= 0 ? "text-green-600" : "text-red-600"}`}
+              >
                 {currencySymbol}
-                {Math.abs(analysisData.firstMonthSavings).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                {Math.abs(analysisData.firstMonthSavings).toLocaleString("en-US", {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2,
+                })}
               </td>
             </tr>
           </tbody>
         </table>
       </div>
 
-
-
-
-
-
-
       {/* Equipment Details with View Options */}
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>Equipment Cash Flow Details</CardTitle>
-          <div className="flex flex-col sm:flex-row sm:items-center">
-            <Select
-              value={viewMode}
-              onValueChange={(value: "individual" | "totals") => setViewMode(value)}
-            >
-              <SelectTrigger className="w-full sm:w-[200px] mr-2">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+            <Select value={viewMode} onValueChange={(value: "individual" | "totals") => setViewMode(value)}>
+              <SelectTrigger className="w-full sm:w-[200px]">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -791,25 +850,43 @@ export function AnalysisResults({
               </SelectContent>
             </Select>
 
-            <Button
-              onClick={exportToCSV}
-              variant="outline"
-              size="sm"
-              className="w-full sm:w-auto"
-            >
+            <Button onClick={exportToCSV} variant="outline" size="sm" className="w-full sm:w-auto bg-transparent">
               <Download className="w-4 h-4 mr-2" />
               Export CSV
             </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              className="w-full sm:w-auto"
-            >
-              <Download className="w-4 h-4 mr-2" />
-              Export Report to PDF
-            </Button>
-          </div>
 
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2">
+              <div className="flex items-center gap-2">
+                <Checkbox
+                  id="detailed-tables"
+                  checked={includeDetailedTables}
+                  onCheckedChange={(checked) => setIncludeDetailedTables(checked as boolean)}
+                />
+                <Label htmlFor="detailed-tables" className="text-sm cursor-pointer whitespace-nowrap">
+                  Detailed Tables
+                </Label>
+              </div>
+              <Button
+                onClick={handleExportPDF}
+                disabled={exportingPDF}
+                variant="default"
+                size="sm"
+                className="w-full sm:w-auto"
+              >
+                {exportingPDF ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Generating...
+                  </>
+                ) : (
+                  <>
+                    <FileText className="w-4 h-4 mr-2" />
+                    Export Report to PDF
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
         </CardHeader>
         <CardContent>
           {viewMode === "individual" ? (
@@ -1178,8 +1255,7 @@ export function AnalysisResults({
         <CardContent>
           <div className="h-96">
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={analysisData.chartData}
-                margin={{ top: 20, right: 30, left: 60, bottom: 40 }}>
+              <LineChart data={analysisData.chartData} margin={{ top: 20, right: 30, left: 60, bottom: 40 }}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis
                   dataKey="month"
@@ -1203,13 +1279,13 @@ export function AnalysisResults({
                   itemSorter={(item) => {
                     switch (item.dataKey) {
                       case "current":
-                        return 0;
+                        return 0
                       case "proposed":
-                        return 1;
+                        return 1
                       case "savings":
-                        return 2;
+                        return 2
                       default:
-                        return 3;
+                        return 3
                     }
                   }}
                   formatter={(value: number, name: string) => {
@@ -1229,15 +1305,16 @@ export function AnalysisResults({
                   itemSorter={(item) => {
                     switch (item.dataKey) {
                       case "current":
-                        return 0;
+                        return 0
                       case "proposed":
-                        return 1;
+                        return 1
                       case "savings":
-                        return 2;
+                        return 2
                       default:
-                        return 3;
+                        return 3
                     }
-                  }} />
+                  }}
+                />
                 <Line type="monotone" dataKey="current" stroke="#ef4444" strokeWidth={2} name="Current Equipment" />
                 <Line type="monotone" dataKey="proposed" stroke="#3b82f6" strokeWidth={2} name="Proposed Equipment" />
                 <Line type="monotone" dataKey="savings" stroke="#10b981" strokeWidth={2} name="Monthly Savings" />
@@ -1272,13 +1349,13 @@ export function AnalysisResults({
                   itemSorter={(item) => {
                     switch (item.dataKey) {
                       case "current":
-                        return 0;
+                        return 0
                       case "proposed":
-                        return 1;
+                        return 1
                       case "savings":
-                        return 2;
+                        return 2
                       default:
-                        return 3;
+                        return 3
                     }
                   }}
                   formatter={(value: number, name: string) => {
@@ -1297,15 +1374,16 @@ export function AnalysisResults({
                   itemSorter={(item) => {
                     switch (item.dataKey) {
                       case "current":
-                        return 0;
+                        return 0
                       case "proposed":
-                        return 1;
+                        return 1
                       case "savings":
-                        return 2;
+                        return 2
                       default:
-                        return 3;
+                        return 3
                     }
-                  }} />
+                  }}
+                />
                 <Bar dataKey="current" fill="#ef4444" name="Current Equipment" />
                 <Bar dataKey="proposed" fill="#3b82f6" name="Proposed Equipment" />
                 <Bar dataKey="savings" fill="#10b981" name="Annual Savings" />
@@ -1357,8 +1435,6 @@ export function AnalysisResults({
           </CardContent>
         </Card>
       )}
-
-
     </div>
   )
 }

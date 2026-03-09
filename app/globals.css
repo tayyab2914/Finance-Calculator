@@ -203,3 +203,35 @@
     transition-duration: 500ms;
   }
 }
+
+/* Add print-specific styles for PDF export */
+@media print {
+  /* Hide all UI elements that shouldn't be in PDF */
+  nav,
+  header,
+  footer,
+  button,
+  .no-print {
+    display: none !important;
+  }
+
+  /* Ensure proper page breaks */
+  .page-break {
+    page-break-before: always;
+  }
+
+  /* Ensure colors are preserved in print */
+  body {
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+
+  /* Optimize table printing */
+  table {
+    page-break-inside: avoid;
+  }
+
+  tr {
+    page-break-inside: avoid;
+  }
+}
