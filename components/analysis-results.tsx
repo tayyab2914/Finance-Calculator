@@ -751,6 +751,7 @@ export function AnalysisResults({
                   minimumFractionDigits: 2,
                   maximumFractionDigits: 2,
                 })}
+                
               </td>
               <td className="border border-gray-300 px-4 py-2 text-right text-blue-600">
                 {currencySymbol}
