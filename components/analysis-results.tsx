@@ -861,16 +861,7 @@ export function AnalysisResults({
             </Button>
 
             <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2">
-              <div className="flex items-center gap-2">
-                <Checkbox
-                  id="detailed-tables"
-                  checked={includeDetailedTables}
-                  onCheckedChange={(checked) => setIncludeDetailedTables(checked as boolean)}
-                />
-                <Label htmlFor="detailed-tables" className="text-sm cursor-pointer whitespace-nowrap">
-                  Detailed Tables
-                </Label>
-              </div>
+
               <Button
                 onClick={handleExportPDF}
                 disabled={exportingPDF}
