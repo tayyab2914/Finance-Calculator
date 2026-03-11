@@ -18,8 +18,6 @@ import {
 } from "@/lib/database"
 import { Loader2, Plus, Search, Trash2, Eye, Filter, SortAsc, Copy, Users, MessageSquare } from "lucide-react"
 import Link from "next/link"
-import { SubscriptionStatus } from "@/components/subscription-status"
-import { SubscriptionGuard } from "@/components/subscription-guard"
 import { FeedbackButton } from "@/components/feedback-button"
 
 export default function DashboardPage() {
@@ -198,18 +196,13 @@ function DashboardContent() {
         <p className="text-gray-600">Welcome back, {user?.user_metadata?.full_name || user?.email}</p>
       </div>
 
-      <div className="mb-6">
-        <SubscriptionStatus />
-      </div>
-
       {error && (
         <Alert variant="destructive" className="mb-6">
           <AlertDescription>{error}</AlertDescription>
         </Alert>
       )}
 
-      <SubscriptionGuard>
-        {/* Quick Actions */}
+      {/* Quick Actions */}
         <div className="grid gap-6 md:grid-cols-3 lg:grid-cols-4 mb-8">
           <Card>
             <CardHeader>
@@ -236,20 +229,7 @@ function DashboardContent() {
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">Refer Friends</CardTitle>
-              <CardDescription>Earn free months for referrals</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Link href="/referrals">
-                <Button className="w-full bg-transparent" variant="outline">
-                  <Users className="w-4 h-4 mr-2" />
-                  View Referrals
-                </Button>
-              </Link>
-            </CardContent>
-          </Card>
+         
 
           <Card>
             <CardHeader>
@@ -261,10 +241,9 @@ function DashboardContent() {
                 <Link href="/feedback">
                   <Button className="w-full bg-transparent" variant="outline">
                     <MessageSquare className="w-4 h-4 mr-2" />
-                    View Feedback
+                    Give Feedback
                   </Button>
                 </Link>
-                <FeedbackButton variant="outline" size="sm" className="w-full" />
               </div>
             </CardContent>
           </Card>
@@ -500,7 +479,6 @@ function DashboardContent() {
             )}
           </CardContent>
         </Card>
-      </SubscriptionGuard>
-    </div>
+      </div>
   )
 }

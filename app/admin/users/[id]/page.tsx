@@ -5,7 +5,6 @@ import { useParams } from "next/navigation"
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import Link from "next/link"
 
@@ -22,17 +21,7 @@ type Profile = {
   is_admin: boolean | null
 }
 
-type Subscription = {
-  id: string
-  status: string
-  trial_end: string | null
-  current_period_start: string | null
-  current_period_end: string | null
-  cancel_at_period_end: boolean
-  stripe_subscription_id: string | null
-} | null
-
-type Analysis = { id: string; title: string; status: string; created_at: string; updated_at: string }
+type Analysis ={ id: string; title: string; status: string; created_at: string; updated_at: string }
 type Referral = {
   id: string
   referrer_id: string
@@ -52,18 +41,15 @@ export default function AdminUserDetailPage() {
   const userId = params.id
   const { data, mutate } = useSWR<{
     profile: Profile
-    subscription: Subscription
     analyses: Analysis[]
     referrals: Referral[]
   }>(`/api/admin/users/${userId}`, fetcher)
 
   const [savingProfile, setSavingProfile] = useState(false)
-  const [savingSub, setSavingSub] = useState(false)
 
   if (!data) return <div className="p-6">Loading...</div>
 
   const p = data.profile
-  const s = data.subscription
 
   async function saveProfile(formData: FormData) {
     setSavingProfile(true)
@@ -84,24 +70,6 @@ export default function AdminUserDetailPage() {
       body: JSON.stringify(payload),
     })
     setSavingProfile(false)
-    if (res.ok) mutate()
-  }
-
-  async function saveSubscription(formData: FormData) {
-    setSavingSub(true)
-    const payload: any = {
-      status: formData.get("status"),
-      trial_end: formData.get("trial_end") || null,
-      current_period_start: formData.get("current_period_start") || null,
-      current_period_end: formData.get("current_period_end") || null,
-      cancel_at_period_end: formData.get("cancel_at_period_end") === "on",
-    }
-    const res = await fetch(`/api/admin/users/${userId}/subscription`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    })
-    setSavingSub(false)
     if (res.ok) mutate()
   }
 
@@ -157,66 +125,6 @@ export default function AdminUserDetailPage() {
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Subscription</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <form
-              onSubmit={(e) => {
-                e.preventDefault()
-                saveSubscription(new FormData(e.currentTarget))
-              }}
-              className="space-y-3"
-            >
-              <Select defaultValue={s?.status || "trialing"} name="status">
-                <SelectTrigger>
-                  <SelectValue placeholder="Select status" />
-                </SelectTrigger>
-                <SelectContent>
-                  {["trialing", "active", "past_due", "canceled", "unpaid", "incomplete", "incomplete_expired"].map(
-                    (st) => (
-                      <SelectItem key={st} value={st}>
-                        {st}
-                      </SelectItem>
-                    ),
-                  )}
-                </SelectContent>
-              </Select>
-
-              <div className="grid grid-cols-2 gap-3">
-                <Input
-                  type="datetime-local"
-                  name="trial_end"
-                  defaultValue={s?.trial_end ? new Date(s.trial_end).toISOString().slice(0, 16) : ""}
-                />
-                <Input
-                  type="datetime-local"
-                  name="current_period_start"
-                  defaultValue={
-                    s?.current_period_start ? new Date(s.current_period_start).toISOString().slice(0, 16) : ""
-                  }
-                />
-                <Input
-                  type="datetime-local"
-                  name="current_period_end"
-                  defaultValue={s?.current_period_end ? new Date(s.current_period_end).toISOString().slice(0, 16) : ""}
-                />
-              </div>
-              <label className="flex items-center gap-2 text-sm">
-                <input type="checkbox" name="cancel_at_period_end" defaultChecked={!!s?.cancel_at_period_end} />
-                Cancel at period end
-              </label>
-              <div className="text-xs text-muted-foreground">
-                Stripe subscription ID: {s?.stripe_subscription_id || "-"}
-              </div>
-
-              <Button type="submit" disabled={savingSub}>
-                {savingSub ? "Saving..." : "Save Subscription"}
-              </Button>
-            </form>
-          </CardContent>
-        </Card>
       </div>
 
       <div className="grid gap-6 md:grid-cols-2">

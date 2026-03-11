@@ -14,7 +14,7 @@ import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Label } from "@/components/ui/label"
 import { MessageSquare, Star, Send, History, CheckCircle } from "lucide-react"
-import { submitFeedback, getUserFeedback, type Feedback } from "@/lib/feedback-utils"
+import { getUserFeedback, type Feedback } from "@/lib/feedback-utils"
 import { toast } from "@/hooks/use-toast"
 
 export default function FeedbackPage() {
@@ -73,43 +73,46 @@ function FeedbackContent() {
       return
     }
 
-    try {
-      setSubmitting(true)
+    setSubmitting(true)
 
-      const feedbackData = {
-        feedback_type: feedbackType,
-        rating: feedbackType === "user_experience" ? rating : undefined,
-        title: title.trim() || undefined,
-        message: message.trim(),
-        category: category.trim() || undefined,
-      }
+    const typeLabel = {
+      general: "General Feedback",
+      feature_request: "Feature Request",
+      bug_report: "Bug Report",
+      user_experience: "User Experience",
+      analysis_specific: "Analysis Specific",
+    }[feedbackType]
 
-      await submitFeedback(user!.id, feedbackData)
+    const subject = `[Upgrr Feedback] ${title.trim() || typeLabel}`
 
-      toast({
-        title: "Thank you!",
-        description: "Your feedback has been submitted successfully.",
-      })
+    const body = [
+      `Type: ${typeLabel}`,
+      category.trim() ? `Category: ${category.trim()}` : null,
+      feedbackType === "user_experience" ? `Rating: ${rating}/5` : null,
+      `From: ${user?.email || "Unknown"}`,
+      ``,
+      `Message:`,
+      message.trim(),
+    ]
+      .filter((line) => line !== null)
+      .join("\n")
 
-      // Reset form
-      setTitle("")
-      setMessage("")
-      setCategory("")
-      setRating(5)
-      setFeedbackType("general")
+    const gmailUrl = `https://mail.google.com/mail/?view=cm&to=support@upgrr.com&su=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`
+    window.open(gmailUrl, "_blank")
 
-      // Reload feedback
-      await loadFeedback()
-    } catch (error) {
-      console.error("Failed to submit feedback:", error)
-      toast({
-        title: "Error",
-        description: "Failed to submit feedback. Please try again.",
-        variant: "destructive",
-      })
-    } finally {
-      setSubmitting(false)
-    }
+    toast({
+      title: "Gmail opened!",
+      description: "Please send the pre-filled email to submit your feedback.",
+    })
+
+    // Reset form
+    setTitle("")
+    setMessage("")
+    setCategory("")
+    setRating(5)
+    setFeedbackType("general")
+
+    setSubmitting(false)
   }
 
   const getStatusBadge = (status: string) => {
@@ -208,7 +211,6 @@ function FeedbackContent() {
       <Tabs defaultValue="submit" className="space-y-6">
         <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="submit">Submit Feedback</TabsTrigger>
-          <TabsTrigger value="history">Feedback History</TabsTrigger>
         </TabsList>
 
         <TabsContent value="submit" className="space-y-6">
@@ -340,64 +342,7 @@ function FeedbackContent() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="history" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <History className="h-5 w-5" />
-                Your Feedback History
-              </CardTitle>
-              <CardDescription>Track the status of your submitted feedback</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {feedback.length === 0 ? (
-                <div className="text-center py-8">
-                  <MessageSquare className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                  <h3 className="text-lg font-medium text-gray-900 mb-2">No feedback submitted yet</h3>
-                  <p className="text-gray-600 mb-4">Share your thoughts to help us improve Upgrr for everyone.</p>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {feedback.map((item) => (
-                    <div key={item.id} className="border rounded-lg p-4 space-y-3">
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-1">
-                            <Badge variant="outline" className="text-xs">
-                              {getTypeLabel(item.feedback_type)}
-                            </Badge>
-                            {getStatusBadge(item.status)}
-                            {item.rating && <div className="flex items-center gap-1">{renderStars(item.rating)}</div>}
-                          </div>
-                          {item.title && <h4 className="font-semibold text-gray-900 mb-1">{item.title}</h4>}
-                          {item.category && <p className="text-sm text-gray-600 mb-2">Category: {item.category}</p>}
-                        </div>
-                        <div className="text-right text-sm text-gray-500">
-                          <p>{formatDate(item.created_at)}</p>
-                        </div>
-                      </div>
-
-                      <p className="text-gray-700 text-sm leading-relaxed">{item.message}</p>
-
-                      {item.admin_response && (
-                        <div className="bg-blue-50 border-l-4 border-blue-200 p-3 rounded">
-                          <div className="flex items-center gap-2 mb-1">
-                            <CheckCircle className="h-4 w-4 text-blue-600" />
-                            <span className="text-sm font-medium text-blue-900">Team Response</span>
-                            {item.admin_responded_at && (
-                              <span className="text-xs text-blue-600">{formatDate(item.admin_responded_at)}</span>
-                            )}
-                          </div>
-                          <p className="text-sm text-blue-800">{item.admin_response}</p>
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
+       
       </Tabs>
     </div>
   )

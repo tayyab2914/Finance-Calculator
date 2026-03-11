@@ -471,7 +471,7 @@ function UpgradeAnalysisContent() {
               <div className="flex flex-col space-y-2 sm:flex-row sm:space-x-2 sm:space-y-0">
                 <Button onClick={addCurrentEquipment}>
                   <Plus className="w-4 h-4 mr-2" />
-                  Add Additional Equipment
+                  Add Equipment
                 </Button>
                 <Button
                   onClick={() => setStep(3)}

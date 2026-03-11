@@ -5,7 +5,6 @@ import { createContext, useContext, useEffect, useState, useRef } from "react"
 import type { User, Session } from "@supabase/supabase-js"
 import { createClient } from "@/utils/supabase/client"
 import { useRouter, usePathname } from "next/navigation"
-import { createTrialSubscription } from "@/lib/subscription-utils"
 
 const supabase = createClient()
 
@@ -46,11 +45,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (!loading && user) {
-      // Only redirect to dashboard on first login, not on every page load
+      // Only redirect on first login, not on every page load
       if (!hasRedirected.current && (pathname === "/" || pathname === "/auth/login" || pathname === "/auth/signup")) {
-        console.log("✅ First login → redirecting /dashboard")
-        router.replace("/dashboard")
         hasRedirected.current = true
+        // Check if profile is set up before deciding where to send the user
+        supabase
+          .from("profiles")
+          .select("company_address, company_phone")
+          .eq("id", user.id)
+          .single()
+          .then(({ data }) => {
+            if (data?.company_address && data?.company_phone) {
+              console.log("✅ First login → redirecting /dashboard")
+              router.replace("/dashboard")
+            } else {
+              console.log("⚠️ Profile incomplete → redirecting /profile")
+              router.replace("/profile")
+            }
+          })
+          .catch(() => {
+            // On error, fall back to dashboard
+            router.replace("/dashboard")
+          })
       }
     } else if (!loading && !user) {
       // Only redirect to home on logout, not when accessing protected routes
@@ -157,15 +173,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
 
-      try {
-        // Wait a moment for the session to be established
-        await new Promise((resolve) => setTimeout(resolve, 1000))
-        await createTrialSubscription(data.user.id)
-        console.log("✅ Trial subscription created for user:", data.user.id)
-      } catch (subscriptionError) {
-        console.error("❌ Trial subscription creation error:", subscriptionError)
-        // Don't throw here - user can still use the app, just log the error
-      }
     }
   }
 

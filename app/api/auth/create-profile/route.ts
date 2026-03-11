@@ -17,7 +17,6 @@ export async function POST(request: Request) {
       company_name: companyName,
       default_discount_rate: 8,
       currency_symbol: "$",
-      subscription_status: "trialing",
     })
 
     if (error) {

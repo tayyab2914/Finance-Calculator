@@ -306,8 +306,8 @@ function ProfileContent() {
                         }}
                         placeholder="8.0"
                       />
-                      <p className="text-sm text-gray-500">This rate will be used as default for new analyses</p>
-                    </div>
+<p className="text-sm text-gray-500">
+If unsure, use your country’s annual inflation rate — it will be used as the default for new analyses.</p>                    </div>
 
                     <div className="space-y-2">
                       <Label htmlFor="currencySymbol">Currency Symbol</Label>

@@ -453,6 +453,10 @@ export function AnalysisResults({
         firstMonthProposed: analysisData.firstMonthProposed,
         paybackPeriodMonths: analysisData.paybackPeriodMonths,
         analysisTitle,
+        chartData: analysisData.chartData,
+        currentCashFlows: analysisData.currentCashFlows,
+        proposedCashFlows: analysisData.proposedCashFlows,
+        allDetails: analysisData.allDetails,
       }
 
       const htmlContent = generatePDFReport(pdfData, includeDetailedTables)
@@ -739,7 +743,7 @@ export function AnalysisResults({
               <th className="border border-gray-300 px-4 py-2 text-left">Metric</th>
               <th className="border border-gray-300 px-4 py-2 text-right">Existing</th>
               <th className="border border-gray-300 px-4 py-2 text-right">Proposed</th>
-              <th className="border border-gray-300 px-4 py-2 text-right">Savings</th>
+              <th className="border border-gray-300 px-4 py-2 text-right"><span className="text-green-600">Savings</span> / <span className="text-red-600">Investment</span></th>
             </tr>
           </thead>
           <tbody>

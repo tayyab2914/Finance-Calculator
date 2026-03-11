@@ -1,4 +1,5 @@
 import type { ClientDetails, Equipment } from "@/app/upgrade-analysis/page"
+import type { MonthlyBreakdown } from "@/lib/equipment-calculations"
 
 interface PDFReportData {
   clientDetails: ClientDetails
@@ -18,6 +19,10 @@ interface PDFReportData {
   paybackPeriodMonths: number | null
   analysisTitle: string
   chartImageUrl?: string
+  chartData: Array<{ month: number; current: number; proposed: number; savings: number }>
+  currentCashFlows: number[]
+  proposedCashFlows: number[]
+  allDetails: MonthlyBreakdown[]
 }
 
 export function generatePDFReport(data: PDFReportData, includeDetailedTables = false): string {
@@ -39,6 +44,10 @@ export function generatePDFReport(data: PDFReportData, includeDetailedTables = f
     paybackPeriodMonths,
     analysisTitle,
     chartImageUrl,
+    chartData,
+    currentCashFlows,
+    proposedCashFlows,
+    allDetails,
   } = data
 
   const hasSavings = npvSavings >= 0
@@ -62,6 +71,314 @@ export function generatePDFReport(data: PDFReportData, includeDetailedTables = f
       : "Immediate"
     : "Not achieved within analysis period"
 
+  // ── SVG Chart Generation ────────────────────────────────────────────────────
+
+  const fmtK = (val: number) => {
+    const abs = Math.abs(val)
+    if (abs >= 1_000_000) return `${currencySymbol}${(val / 1_000_000).toFixed(1)}M`
+    if (abs >= 1_000) return `${currencySymbol}${(val / 1_000).toFixed(0)}k`
+    return `${currencySymbol}${val.toFixed(0)}`
+  }
+
+  // ── Helper: nice tick interval (mirrors Recharts "nice" axis logic) ────────
+  const niceNum = (range: number, round: boolean): number => {
+    if (range === 0) return 1
+    const exp = Math.floor(Math.log10(Math.abs(range)))
+    const frac = range / Math.pow(10, exp)
+    let nice: number
+    if (round) { nice = frac < 1.5 ? 1 : frac < 3 ? 2 : frac < 7 ? 5 : 10 }
+    else        { nice = frac <= 1 ? 1 : frac <= 2 ? 2 : frac <= 5 ? 5 : 10 }
+    return nice * Math.pow(10, exp)
+  }
+
+  // ── Helper: monotone cubic bezier — same algorithm as Recharts type="monotone" ──
+  const monotoneSpline = (pts: Array<{ x: number; y: number }>): string => {
+    if (pts.length < 2) return ""
+    if (pts.length === 2)
+      return `M${pts[0].x.toFixed(1)},${pts[0].y.toFixed(1)} L${pts[1].x.toFixed(1)},${pts[1].y.toFixed(1)}`
+    const n = pts.length
+    const dx = pts.map((_, i) => i < n - 1 ? pts[i + 1].x - pts[i].x : 0)
+    const slopes = pts.map((_, i) => i < n - 1 && dx[i] !== 0 ? (pts[i + 1].y - pts[i].y) / dx[i] : 0)
+    const tang = new Array(n).fill(0)
+    tang[0] = slopes[0]; tang[n - 1] = slopes[n - 2]
+    for (let i = 1; i < n - 1; i++) {
+      if (slopes[i - 1] * slopes[i] <= 0) { tang[i] = 0; continue }
+      tang[i] = (slopes[i - 1] + slopes[i]) / 2
+      const a = tang[i] / slopes[i - 1], b = tang[i] / slopes[i]
+      if (a * a + b * b > 9) { const tau = 3 / Math.sqrt(a * a + b * b); tang[i] = tau * a * slopes[i - 1] }
+    }
+    let path = `M${pts[0].x.toFixed(1)},${pts[0].y.toFixed(1)}`
+    for (let i = 0; i < n - 1; i++) {
+      const cp1x = pts[i].x + dx[i] / 3,     cp1y = pts[i].y + tang[i] * dx[i] / 3
+      const cp2x = pts[i + 1].x - dx[i] / 3, cp2y = pts[i + 1].y - tang[i + 1] * dx[i] / 3
+      path += ` C${cp1x.toFixed(1)},${cp1y.toFixed(1)} ${cp2x.toFixed(1)},${cp2y.toFixed(1)} ${pts[i + 1].x.toFixed(1)},${pts[i + 1].y.toFixed(1)}`
+    }
+    return path
+  }
+
+  // Monthly Cash Flow Line Chart — high-res, matches website Recharts output
+  const lineChartSVG = (() => {
+    // Large canvas so every data point and label is clearly readable when printed
+    const W = 820, H = 420
+    const ml = 105, mr = 40, mt = 30, mb = 80
+    const pw = W - ml - mr, ph = H - mt - mb
+
+    const allVals = chartData.flatMap(d => [d.current, d.proposed, d.savings])
+    const rawMin = Math.min(...allVals, 0)
+    const rawMax = Math.max(...allVals, 0)
+    const rawRange = rawMax - rawMin || 1
+
+    // Nice tick spacing — gives clean round Y axis values like Recharts
+    const tickSpacing = niceNum(rawRange / 4, true)
+    const niceMin = Math.floor(rawMin / tickSpacing) * tickSpacing
+    const niceMax = Math.ceil(rawMax / tickSpacing) * tickSpacing
+    const range = niceMax - niceMin || 1
+
+    const n = chartData.length
+    const toX = (month: number) => ml + ((month - 1) / Math.max(n - 1, 1)) * pw
+    const toY = (v: number) => mt + ((niceMax - v) / range) * ph
+
+    // Smooth bezier paths matching Recharts type="monotone"
+    const makePath = (key: "current" | "proposed" | "savings") =>
+      monotoneSpline(chartData.map(d => ({ x: toX(d.month), y: toY(d[key]) })))
+
+    // Dot markers at every data point — Recharts renders these by default on <Line>
+    const makeDots = (key: "current" | "proposed" | "savings", color: string) =>
+      chartData.map(d =>
+        `<circle cx="${toX(d.month).toFixed(1)}" cy="${toY(d[key]).toFixed(1)}" r="2.5" fill="${color}" stroke="#fff" stroke-width="1"/>`
+      ).join("")
+
+    // Y ticks — same format as Recharts tickFormatter: `${currencySymbol}${value.toLocaleString()}`
+    const yTickVals: number[] = []
+    for (let v = niceMin; v <= niceMax + tickSpacing * 0.01; v += tickSpacing) yTickVals.push(v)
+    const fmtY = (v: number) => `${currencySymbol}${Math.round(v).toLocaleString("en-US")}`
+
+    const yTicksSVG = yTickVals.map(v => {
+      const y = toY(v)
+      return `<line x1="${ml}" y1="${y.toFixed(1)}" x2="${ml + pw}" y2="${y.toFixed(1)}" stroke="#e0e0e0" stroke-width="1" stroke-dasharray="3 3"/>` +
+             `<text x="${(ml - 8).toFixed(1)}" y="${(y + 4).toFixed(1)}" text-anchor="end" fill="#6b7280" font-size="11">${fmtY(v)}</text>`
+    }).join("")
+
+    // X ticks: every 5–6 months to match Recharts auto-density (shows ~10 labels across the chart)
+    // Recharts with 60 months auto-picks ~every 5 months; we pick interval so we get ~10–12 labels
+    const targetLabels = 12
+    const rawInterval = Math.max(1, Math.round(n / targetLabels))
+    // Round to nearest nice interval: 1, 2, 3, 5, 6, 10, 12
+    const niceIntervals = [1, 2, 3, 5, 6, 10, 12]
+    const xInterval = niceIntervals.reduce((prev, cur) =>
+      Math.abs(cur - rawInterval) < Math.abs(prev - rawInterval) ? cur : prev
+    )
+    const xTickMonths: number[] = []
+    for (let m = 1; m <= n; m++) {
+      if (m === 1 || m % xInterval === 0) xTickMonths.push(m)
+    }
+
+    const xTicksSVG = xTickMonths.map(m => {
+      const x = toX(m)
+      return `<line x1="${x.toFixed(1)}" y1="${mt}" x2="${x.toFixed(1)}" y2="${(mt + ph).toFixed(1)}" stroke="#f3f4f6" stroke-width="1" stroke-dasharray="3 3"/>` +
+             `<line x1="${x.toFixed(1)}" y1="${(mt + ph).toFixed(1)}" x2="${x.toFixed(1)}" y2="${(mt + ph + 4).toFixed(1)}" stroke="#d1d5db" stroke-width="1"/>` +
+             `<text x="${x.toFixed(1)}" y="${(mt + ph + 18).toFixed(1)}" text-anchor="middle" fill="#6b7280" font-size="11">${m}</text>`
+    }).join("")
+
+    // Zero line — only when savings go negative
+    const zeroLineSVG = rawMin < 0
+      ? `<line x1="${ml}" y1="${toY(0).toFixed(1)}" x2="${ml + pw}" y2="${toY(0).toFixed(1)}" stroke="#9ca3af" stroke-width="1"/>`
+      : ""
+
+    // Rotated Y-axis label and X-axis label
+    const yLabel = `<text transform="rotate(-90)" x="${(-(mt + ph / 2)).toFixed(1)}" y="14" text-anchor="middle" fill="#6b7280" font-size="11">Monthly Cost (${currencySymbol})</text>`
+    const xLabel = `<text x="${(ml + pw / 2).toFixed(1)}" y="${H - 6}" text-anchor="middle" fill="#6b7280" font-size="11">Month</text>`
+
+    // Legend — line + centre dot matching Recharts Legend for LineChart, well spaced
+    const legendY = H - 26
+    const legendItems = [
+      { color: "#ef4444", label: "Current Equipment",  lx: ml },
+      { color: "#3b82f6", label: "Proposed Equipment", lx: ml + 175 },
+      { color: "#10b981", label: "Monthly Savings",    lx: ml + 355 },
+    ]
+    const legendSVG = legendItems.map(li =>
+      `<line x1="${li.lx}" y1="${legendY}" x2="${li.lx + 22}" y2="${legendY}" stroke="${li.color}" stroke-width="2"/>` +
+      `<circle cx="${li.lx + 11}" cy="${legendY}" r="4" fill="${li.color}" stroke="#fff" stroke-width="1"/>` +
+      `<text x="${li.lx + 29}" y="${legendY + 4}" fill="#374151" font-size="11">${li.label}</text>`
+    ).join("")
+
+    return `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" style="font-family:Arial,sans-serif">
+      <line x1="${ml}" y1="${mt}" x2="${ml}" y2="${mt + ph}" stroke="#d1d5db" stroke-width="1"/>
+      <line x1="${ml}" y1="${mt + ph}" x2="${ml + pw}" y2="${mt + ph}" stroke="#d1d5db" stroke-width="1"/>
+      ${yTicksSVG}
+      ${xTicksSVG}
+      ${zeroLineSVG}
+      ${yLabel}
+      ${xLabel}
+      <path d="${makePath("current")}"  fill="none" stroke="#ef4444" stroke-width="2"/>
+      <path d="${makePath("proposed")}" fill="none" stroke="#3b82f6" stroke-width="2"/>
+      <path d="${makePath("savings")}"  fill="none" stroke="#10b981" stroke-width="2"/>
+      ${makeDots("current",  "#ef4444")}
+      ${makeDots("proposed", "#3b82f6")}
+      ${makeDots("savings",  "#10b981")}
+      ${legendSVG}
+    </svg>`
+  })()
+
+  // Annual Cost Bar Chart
+  const barChartSVG = (() => {
+    const W = 820, H = 420
+    const ml = 105, mr = 40, mt = 30, mb = 80
+    const pw = W - ml - mr, ph = H - mt - mb
+
+    const annualData = Array.from({ length: analysisYears }, (_, i) => {
+      const s = i * 12, e = s + 12
+      const cur = currentCashFlows.slice(s, e).reduce((a, v) => a + v, 0)
+      const pro = proposedCashFlows.slice(s, e).reduce((a, v) => a + v, 0)
+      return { year: i + 1, current: cur, proposed: pro, savings: cur - pro }
+    })
+
+    const allVals = annualData.flatMap(d => [d.current, d.proposed, d.savings])
+    const minV = Math.min(...allVals, 0)
+    const maxV = Math.max(...allVals, 0)
+    const range = maxV - minV || 1
+
+    const toY = (v: number) => mt + ((maxV - v) / range) * ph
+    const zeroY = toY(0)
+    const groupW = pw / analysisYears
+    const bw = Math.max(4, groupW / 5)
+
+    const yTicks = Array.from({ length: 5 }, (_, i) => {
+      const v = minV + (range * i) / 4
+      return `<line x1="${ml}" y1="${toY(v).toFixed(1)}" x2="${ml + pw}" y2="${toY(v).toFixed(1)}" stroke="#e5e7eb" stroke-width="1"/>
+              <text x="${ml - 8}" y="${(toY(v) + 4).toFixed(1)}" text-anchor="end" fill="#6b7280" font-size="11">${fmtK(v)}</text>`
+    }).join("")
+
+    const makeBar = (val: number, x: number, color: string) => {
+      if (val >= 0) {
+        const barH = toY(0) - toY(val)
+        return `<rect x="${x.toFixed(1)}" y="${toY(val).toFixed(1)}" width="${bw.toFixed(1)}" height="${Math.max(barH, 1).toFixed(1)}" fill="${color}"/>`
+      } else {
+        const barH = toY(val) - zeroY
+        return `<rect x="${x.toFixed(1)}" y="${zeroY.toFixed(1)}" width="${bw.toFixed(1)}" height="${Math.max(barH, 1).toFixed(1)}" fill="${color}" opacity="0.7"/>`
+      }
+    }
+
+    const bars = annualData.map((d, i) => {
+      const gx = ml + i * groupW + (groupW - bw * 3.6) / 2
+      const cx = gx, px = gx + bw * 1.3, sx = gx + bw * 2.6
+      const labelX = ml + i * groupW + groupW / 2
+      return `${makeBar(d.current, cx, "#ef4444")}${makeBar(d.proposed, px, "#3b82f6")}${makeBar(d.savings, sx, "#10b981")}
+              <text x="${labelX.toFixed(1)}" y="${mt + ph + 20}" text-anchor="middle" fill="#6b7280" font-size="11">Yr ${d.year}</text>`
+    }).join("")
+
+    const legendY = H - 26
+    return `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" style="font-family:Arial,sans-serif">
+      <line x1="${ml}" y1="${mt}" x2="${ml}" y2="${mt + ph}" stroke="#d1d5db" stroke-width="1"/>
+      <line x1="${ml}" y1="${zeroY.toFixed(1)}" x2="${ml + pw}" y2="${zeroY.toFixed(1)}" stroke="#d1d5db" stroke-width="1"/>
+      ${yTicks}${bars}
+      <rect x="${ml}" y="${legendY - 8}" width="14" height="14" fill="#ef4444"/>
+      <text x="${ml + 20}" y="${legendY + 4}" fill="#374151" font-size="11">Current Equipment</text>
+      <rect x="${ml + 175}" y="${legendY - 8}" width="14" height="14" fill="#3b82f6"/>
+      <text x="${ml + 195}" y="${legendY + 4}" fill="#374151" font-size="11">Proposed Equipment</text>
+      <rect x="${ml + 355}" y="${legendY - 8}" width="14" height="14" fill="#10b981"/>
+      <text x="${ml + 375}" y="${legendY + 4}" fill="#374151" font-size="11">Annual Savings</text>
+    </svg>`
+  })()
+
+  // ── Helper: two-line component chart (current=red, proposed=blue) ───────────
+  const makeComponentChart = (
+    currentVals: number[],
+    proposedVals: number[],
+  ): string => {
+    const W = 820, H = 320
+    const ml = 105, mr = 40, mt = 30, mb = 70
+    const pw = W - ml - mr, ph = H - mt - mb
+    const n = currentVals.length
+    if (n === 0) return ""
+
+    const allV = [...currentVals, ...proposedVals]
+    const rawMin = Math.min(...allV, 0)
+    const rawMax = Math.max(...allV, 0)
+    const rawRange = rawMax - rawMin || 1
+    const tickSpacing = niceNum(rawRange / 5, true)
+    const niceMin = Math.floor(rawMin / tickSpacing) * tickSpacing
+    const niceMax = Math.ceil(rawMax / tickSpacing) * tickSpacing
+
+    const toX = (m: number) => ml + ((m - 1) / Math.max(n - 1, 1)) * pw
+    const toY = (v: number) => mt + ((niceMax - v) / (niceMax - niceMin || 1)) * ph
+
+    const makePath = (vals: number[]) =>
+      monotoneSpline(vals.map((v, i) => ({ x: toX(i + 1), y: toY(v) })))
+    const makeDots = (vals: number[], color: string) =>
+      vals.map((v, i) =>
+        `<circle cx="${toX(i + 1).toFixed(1)}" cy="${toY(v).toFixed(1)}" r="2.5" fill="${color}" stroke="#fff" stroke-width="1"/>`
+      ).join("")
+
+    const yTickVals: number[] = []
+    for (let v = niceMin; v <= niceMax + tickSpacing * 0.01; v += tickSpacing) yTickVals.push(v)
+    const yTicksSVG = yTickVals.map(v => {
+      const y = toY(v)
+      return `<line x1="${ml}" y1="${y.toFixed(1)}" x2="${ml + pw}" y2="${y.toFixed(1)}" stroke="#e0e0e0" stroke-width="1" stroke-dasharray="3 3"/>` +
+             `<text x="${(ml - 8).toFixed(1)}" y="${(y + 4).toFixed(1)}" text-anchor="end" fill="#6b7280" font-size="11">${fmtK(v)}</text>`
+    }).join("")
+
+    const pixelsPerMonth = pw / Math.max(n - 1, 1)
+    const xLabelFs = Math.max(6, Math.min(9, Math.floor(pixelsPerMonth * 0.9)))
+    const xLabelCenterY = mt + ph + 14
+    const xTicksSVG = currentVals.map((_, i) => {
+      const x = toX(i + 1)
+      return `<line x1="${x.toFixed(1)}" y1="${mt}" x2="${x.toFixed(1)}" y2="${(mt + ph).toFixed(1)}" stroke="#f3f4f6" stroke-width="1" stroke-dasharray="3 3"/>` +
+             `<line x1="${x.toFixed(1)}" y1="${(mt + ph).toFixed(1)}" x2="${x.toFixed(1)}" y2="${(mt + ph + 4).toFixed(1)}" stroke="#d1d5db" stroke-width="1"/>` +
+             `<text transform="rotate(-90, ${x.toFixed(1)}, ${xLabelCenterY})" x="${x.toFixed(1)}" y="${xLabelCenterY}" text-anchor="middle" fill="#6b7280" font-size="${xLabelFs}">${i + 1}</text>`
+    }).join("")
+
+    const zeroLineSVG = rawMin < 0
+      ? `<line x1="${ml}" y1="${toY(0).toFixed(1)}" x2="${ml + pw}" y2="${toY(0).toFixed(1)}" stroke="#9ca3af" stroke-width="1"/>`
+      : ""
+
+    const legendY = H - 20
+    return `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" style="font-family:Arial,sans-serif">
+      <rect width="${W}" height="${H}" fill="#fff"/>
+      <line x1="${ml}" y1="${mt}" x2="${ml}" y2="${mt + ph}" stroke="#d1d5db" stroke-width="1"/>
+      <line x1="${ml}" y1="${mt + ph}" x2="${ml + pw}" y2="${mt + ph}" stroke="#d1d5db" stroke-width="1"/>
+      ${yTicksSVG}${xTicksSVG}${zeroLineSVG}
+      <path d="${makePath(currentVals)}" fill="none" stroke="#ef4444" stroke-width="2"/>
+      <path d="${makePath(proposedVals)}" fill="none" stroke="#3b82f6" stroke-width="2"/>
+      ${makeDots(currentVals, "#ef4444")}${makeDots(proposedVals, "#3b82f6")}
+      <line x1="${ml}" y1="${legendY}" x2="${ml + 22}" y2="${legendY}" stroke="#ef4444" stroke-width="2"/>
+      <circle cx="${ml + 11}" cy="${legendY}" r="4" fill="#ef4444" stroke="#fff" stroke-width="1"/>
+      <text x="${ml + 29}" y="${legendY + 4}" fill="#374151" font-size="11">Current Equipment</text>
+      <line x1="${ml + 175}" y1="${legendY}" x2="${ml + 197}" y2="${legendY}" stroke="#3b82f6" stroke-width="2"/>
+      <circle cx="${ml + 186}" cy="${legendY}" r="4" fill="#3b82f6" stroke="#fff" stroke-width="1"/>
+      <text x="${ml + 204}" y="${legendY + 4}" fill="#374151" font-size="11">Proposed Equipment</text>
+    </svg>`
+  }
+
+  // ── Aggregate component arrays from allDetails ───────────────────────────────
+  const totalMonthsForCharts = analysisYears * 12
+  const componentData = Array.from({ length: totalMonthsForCharts }, (_, i) => {
+    const month = i + 1
+    const cur = allDetails.filter(d => d.equipmentType === "current" && d.month === month)
+    const pro = allDetails.filter(d => d.equipmentType === "proposed" && d.month === month)
+    return {
+      currentLease:  cur.reduce((s, d) => s + d.leaseAmount, 0),
+      proposedLease: pro.reduce((s, d) => s + d.leaseAmount, 0),
+      currentClicks:  cur.reduce((s, d) => s + d.blackClickCharges + d.colorClickCharges, 0),
+      proposedClicks: pro.reduce((s, d) => s + d.blackClickCharges + d.colorClickCharges, 0),
+      currentOther:  cur.reduce((s, d) => s + d.tonerCosts + d.otherCosts, 0),
+      proposedOther: pro.reduce((s, d) => s + d.tonerCosts + d.otherCosts, 0),
+    }
+  })
+
+  const leaseChartSVG  = makeComponentChart(
+    componentData.map(d => d.currentLease),
+    componentData.map(d => d.proposedLease),
+  )
+  const clicksChartSVG = makeComponentChart(
+    componentData.map(d => d.currentClicks),
+    componentData.map(d => d.proposedClicks),
+  )
+  const otherChartSVG  = makeComponentChart(
+    componentData.map(d => d.currentOther),
+    componentData.map(d => d.proposedOther),
+  )
+
   return `
 <!DOCTYPE html>
 <html>
@@ -71,7 +388,40 @@ export function generatePDFReport(data: PDFReportData, includeDetailedTables = f
   <style>
     @page {
       size: A4;
-      margin: 15mm;
+      /* 18mm top/bottom gives space for header & footer; 15mm left/right for content */
+      margin: 18mm 15mm;
+
+      /* ── Header: date left, analysis title right (no @top-center so each box gets 50% width) ── */
+      @top-left {
+        font-family: 'Segoe UI', Arial, sans-serif;
+        font-size: 8pt;
+        color: #6b7280;
+        vertical-align: bottom;
+        padding-bottom: 3mm;
+        border-bottom: 1px solid #e5e7eb;
+      }
+      @top-right {
+        content: "${analysisTitle.replace(/"/g, "'")} - Financial Analysis Report";
+        font-family: 'Segoe UI', Arial, sans-serif;
+        font-size: 8pt;
+        color: #6b7280;
+        text-align: right;
+        white-space: nowrap;
+        vertical-align: bottom;
+        padding-bottom: 3mm;
+        border-bottom: 1px solid #e5e7eb;
+      }
+
+      /* ── Footer: page number centred ── */
+      @bottom-center {
+        content: "Page " counter(page);
+        font-family: 'Segoe UI', Arial, sans-serif;
+        font-size: 8pt;
+        color: #6b7280;
+        padding-bottom: 4mm;
+        border-top: 1px solid #e5e7eb;
+        padding-top: 3mm;
+      }
     }
 
     * {
@@ -85,6 +435,8 @@ export function generatePDFReport(data: PDFReportData, includeDetailedTables = f
       line-height: 1.6;
       color: #1f2937;
       font-size: 11pt;
+      /* @page margin handles top/bottom spacing — no extra body padding needed */
+      padding: 0 2mm;
     }
 
     .report-container {
@@ -318,13 +670,7 @@ export function generatePDFReport(data: PDFReportData, includeDetailedTables = f
               : `The proposed equipment will result in an additional cost compared to maintaining current equipment over the ${analysisYears}-year analysis period.`
           }
         </div>
-        ${
-          hasSavings && paybackPeriodMonths && paybackPeriodMonths > 0
-            ? `<div class="summary-text" style="margin-top: 10px;">
-                <strong>Payback Period:</strong> ${paybackPeriodText}
-              </div>`
-            : ""
-        }
+        
       </div>
     </div>
 
@@ -410,14 +756,7 @@ export function generatePDFReport(data: PDFReportData, includeDetailedTables = f
             <td class="text-right">${formatCurrency(firstMonthProposed)}</td>
             <td class="text-right">${formatCurrency(firstMonthSavings)}</td>
           </tr>
-          ${
-            paybackPeriodMonths
-              ? `<tr>
-                  <td>Payback Period</td>
-                  <td colspan="3" class="text-center">${paybackPeriodText}</td>
-                </tr>`
-              : ""
-          }
+         
         </tbody>
       </table>
     </div>
@@ -480,10 +819,10 @@ export function generatePDFReport(data: PDFReportData, includeDetailedTables = f
           .map(
             (eq) => `
           <li class="equipment-item equipment-current">
-            <strong>${eq.brand} ${eq.model}</strong> - ${eq.type === "color" ? "Color & Black" : "Black Only"} | 
+            <strong>${eq.brand} ${eq.model}</strong> - ${eq.type === "color" ? "Color & Black" : "Black Only"} |
             ${eq.ownership} | Location: ${eq.location}
-            ${eq.blackVolume ? `<br/>Black Volume: ${eq.blackVolume.toLocaleString()}/month` : ""}
-            ${eq.colorVolume ? ` | Color Volume: ${eq.colorVolume.toLocaleString()}/month` : ""}
+            ${eq.clickCharges?.black?.monthlyVolume ? `<br/>Black Volume: ${eq.clickCharges.black.monthlyVolume.toLocaleString()}/month` : ""}
+            ${eq.clickCharges?.color?.monthlyVolume ? ` | Color Volume: ${eq.clickCharges.color.monthlyVolume.toLocaleString()}/month` : ""}
           </li>
         `,
           )
@@ -496,10 +835,10 @@ export function generatePDFReport(data: PDFReportData, includeDetailedTables = f
           .map(
             (eq) => `
           <li class="equipment-item equipment-proposed">
-            <strong>${eq.brand} ${eq.model}</strong> - ${eq.type === "color" ? "Color & Black" : "Black Only"} | 
+            <strong>${eq.brand} ${eq.model}</strong> - ${eq.type === "color" ? "Color & Black" : "Black Only"} |
             ${eq.ownership} | Location: ${eq.location}
-            ${eq.blackVolume ? `<br/>Black Volume: ${eq.blackVolume.toLocaleString()}/month` : ""}
-            ${eq.colorVolume ? ` | Color Volume: ${eq.colorVolume.toLocaleString()}/month` : ""}
+            ${eq.clickCharges?.black?.monthlyVolume ? `<br/>Black Volume: ${eq.clickCharges.black.monthlyVolume.toLocaleString()}/month` : ""}
+            ${eq.clickCharges?.color?.monthlyVolume ? ` | Color Volume: ${eq.clickCharges.color.monthlyVolume.toLocaleString()}/month` : ""}
           </li>
         `,
           )
@@ -510,8 +849,40 @@ export function generatePDFReport(data: PDFReportData, includeDetailedTables = f
         : ""
     }
 
-    <!-- Recommendation -->
+    <!-- Monthly Cash Flow Chart -->
+    <div class="section page-break">
+      <div class="section-title">Monthly Cash Flow Comparison</div>
+      <div class="chart-container">
+        ${lineChartSVG}
+      </div>
+    </div>
+
+    <!-- Annual Cost Chart -->
     <div class="section">
+      <div class="section-title">Annual Cost Comparison</div>
+      <div class="chart-container">
+        ${barChartSVG}
+      </div>
+    </div>
+
+    <!-- Cash Flow Components -->
+    <div class="section page-break">
+      <div class="section-title">Lease Cost Comparison (Monthly)</div>
+      <div class="chart-container">${leaseChartSVG}</div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Click Charges Comparison (Monthly)</div>
+      <div class="chart-container">${clicksChartSVG}</div>
+    </div>
+
+    <div class="section page-break">
+      <div class="section-title">Other Costs Comparison (Monthly)</div>
+      <div class="chart-container">${otherChartSVG}</div>
+    </div>
+
+    <!-- Recommendation -->
+    <div class="section page-break">
       <div class="section-title">Recommendation</div>
       <p style="margin-bottom: 12px;">
         ${
@@ -525,20 +896,14 @@ export function generatePDFReport(data: PDFReportData, includeDetailedTables = f
       <p>
         ${
           hasSavings
-            ? `The proposed equipment offers improved efficiency, reduced operating costs, and modern features that justify the investment. 
-               ${paybackPeriodMonths && paybackPeriodMonths > 0 ? `The investment will pay for itself within ${paybackPeriodText}.` : ""}`
-            : `However, if there are qualitative benefits such as improved functionality, reliability, or business requirements that aren't captured 
+            ? `The proposed equipment offers improved efficiency, reduced operating costs, and modern features that justify the investment. `            : `However, if there are qualitative benefits such as improved functionality, reliability, or business requirements that aren't captured 
                in pure financial terms, these should be considered alongside this cost analysis.`
         }
       </p>
     </div>
 
-    <!-- Footer -->
-    <div class="report-footer">
-      <p>This report was generated by Upgrr - Equipment Cost Analysis Tool</p>
-      <p>${currentDate}</p>
-    </div>
   </div>
+
 </body>
 </html>
   `
@@ -555,18 +920,12 @@ export function triggerPDFPrint(htmlContent: string) {
   printFrame.style.border = "none"
   document.body.appendChild(printFrame)
 
-  const printDocument = printFrame.contentWindow?.document
-  if (!printDocument) {
-    console.error("Could not access print frame document")
-    return
-  }
-
-  printDocument.open()
-  printDocument.write(htmlContent)
-  printDocument.close()
+  // srcdoc keeps the iframe URL as about:blank so the browser's
+  // print header won't show the app URL even if headers are enabled
+  printFrame.srcdoc = htmlContent
 
   // Wait for content to load, then print
-  printFrame.contentWindow?.addEventListener("load", () => {
+  printFrame.addEventListener("load", () => {
     setTimeout(() => {
       printFrame.contentWindow?.print()
       // Clean up after printing

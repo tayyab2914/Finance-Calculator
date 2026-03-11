@@ -14,15 +14,6 @@ type UserRow = {
   name: string | null
   company: string | null
   is_admin: boolean
-  subscription_status: string | null
-  trial_ends_at: string | null
-  subscription: {
-    id: string
-    status: string
-    trial_end: string | null
-    current_period_end: string | null
-    cancel_at_period_end: boolean
-  } | null
   created_at: string
 }
 
@@ -80,8 +71,6 @@ export default function AdminHomePage() {
                 <th className="py-2 pr-4">Email</th>
                 <th className="py-2 pr-4">Name</th>
                 <th className="py-2 pr-4">Company</th>
-                <th className="py-2 pr-4">Status</th>
-                <th className="py-2 pr-4">Ends</th>
                 <th className="py-2 pr-4">Admin</th>
                 <th className="py-2 pr-4">Actions</th>
               </tr>
@@ -92,22 +81,6 @@ export default function AdminHomePage() {
                   <td className="py-3 pr-4">{u.email}</td>
                   <td className="py-3 pr-4">{u.name}</td>
                   <td className="py-3 pr-4">{u.company}</td>
-                  <td className="py-3 pr-4">
-                    {u.subscription?.status ? (
-                      <Badge variant={u.subscription.status === "active" ? "default" : "secondary"}>
-                        {u.subscription.status}
-                      </Badge>
-                    ) : (
-                      <span className="text-muted-foreground">none</span>
-                    )}
-                  </td>
-                  <td className="py-3 pr-4">
-                    {u.subscription?.current_period_end
-                      ? new Date(u.subscription.current_period_end).toLocaleDateString()
-                      : u.trial_ends_at
-                        ? new Date(u.trial_ends_at).toLocaleDateString()
-                        : "-"}
-                  </td>
                   <td className="py-3 pr-4">{u.is_admin ? <Badge>admin</Badge> : "-"}</td>
                   <td className="py-3 pr-4">
                     <Link href={`/admin/users/${u.id}`}>
@@ -118,7 +91,7 @@ export default function AdminHomePage() {
               ))}
               {filtered.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="py-8 text-center text-muted-foreground">
+                  <td colSpan={5} className="py-8 text-center text-muted-foreground">
                     No users match your search.
                   </td>
                 </tr>
@@ -130,3 +103,4 @@ export default function AdminHomePage() {
     </main>
   )
 }
+

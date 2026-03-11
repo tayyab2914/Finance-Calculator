@@ -12,18 +12,15 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { User, LogOut, Settings, CreditCard, Users, MessageSquare } from "lucide-react"
+import { User, LogOut, Settings, MessageSquare } from "lucide-react"
 import { useEffect, useState } from "react"
 import { getUserProfile } from "@/lib/database"
 import Image from "next/image"
-import { useSubscription } from "@/hooks/use-subscription"
-import { Badge } from "@/components/ui/badge"
 
 export function Navigation() {
   const pathname = usePathname()
   const { user, signOut } = useAuth()
   const [profile, setProfile] = useState<any>(null)
-  const { isTrialing, trialDaysLeft, isActive, isPastDue } = useSubscription()
 
   useEffect(() => {
     if (user) {
@@ -57,7 +54,7 @@ export function Navigation() {
     { href: "/upgrade-analysis", label: "Upgrade Analysis" },
     { href: "/settlement-calculator", label: "Settlement Calculator" },
     { href: "/tools", label: "Tools" },
-    { href: "/referrals", label: "Referrals" },
+    // { href: "/referrals", label: "Referrals" },
     { href: "/feedback", label: "Feedback" },
   ]
 
@@ -67,39 +64,6 @@ export function Navigation() {
     await signOut()
   }
 
-  const getSubscriptionBadge = () => {
-    if (!user) return null
-
-    if (isTrialing && trialDaysLeft > 0) {
-      return (
-        <Badge variant="secondary" className="ml-2 text-xs bg-blue-100 text-blue-800">
-          Trial: {trialDaysLeft}d left
-        </Badge>
-      )
-    }
-
-    if (isActive) {
-      return (
-        <Badge variant="default" className="ml-2 text-xs bg-green-100 text-green-800">
-          Pro
-        </Badge>
-      )
-    }
-
-    if (isPastDue) {
-      return (
-        <Badge variant="destructive" className="ml-2 text-xs">
-          Past Due
-        </Badge>
-      )
-    }
-
-    return (
-      <Badge variant="outline" className="ml-2 text-xs">
-        Free
-      </Badge>
-    )
-  }
 
   return (
     <nav className="bg-white shadow-sm border-b">
@@ -127,8 +91,6 @@ export function Navigation() {
 
             {user ? (
               <div className="flex items-center gap-2">
-                {getSubscriptionBadge()}
-
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="ghost" className="flex items-center gap-2">
@@ -151,18 +113,12 @@ export function Navigation() {
                         Profile Settings
                       </Link>
                     </DropdownMenuItem>
-                    <DropdownMenuItem asChild>
-                      <Link href="/subscription" className="flex items-center gap-2">
-                        <CreditCard className="w-4 h-4" />
-                        Subscription
-                      </Link>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem asChild>
+                    {/* <DropdownMenuItem asChild>
                       <Link href="/referrals" className="flex items-center gap-2">
                         <Users className="w-4 h-4" />
                         Referrals
                       </Link>
-                    </DropdownMenuItem>
+                    </DropdownMenuItem> */}
                     <DropdownMenuItem asChild>
                       <Link href="/feedback" className="flex items-center gap-2">
                         <MessageSquare className="w-4 h-4" />
