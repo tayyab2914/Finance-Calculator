@@ -241,7 +241,7 @@ function DashboardContent() {
                 <Link href="/feedback">
                   <Button className="w-full bg-transparent" variant="outline">
                     <MessageSquare className="w-4 h-4 mr-2" />
-                    Give Feedback
+                    Give feedback
                   </Button>
                 </Link>
               </div>
